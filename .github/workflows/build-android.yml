@@ -41,13 +41,29 @@ jobs:
           unzip -q Diyse_Source.zip -d source
           test -f source/settings.gradle
 
+      - name: Patch unsupported placeholder-art call
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("source/core/src/main/java/com/dj/diyse/ui/PrototypeArt.java")
+          text = path.read_text()
+          old = "        pixmap.fillEllipse(18, 8, 92, 24);"
+          new = """        pixmap.fillRectangle(28, 12, 72, 16);
+                  pixmap.fillCircle(28, 20, 8);
+                  pixmap.fillCircle(100, 20, 8);"""
+          if old not in text:
+              raise SystemExit("Expected fillEllipse call was not found.")
+          path.write_text(text.replace(old, new))
+          PY
+
       - name: Run combat and progression tests
         working-directory: source
-        run: gradle --no-daemon :core:test
+        run: gradle --no-daemon --stacktrace :core:test
 
       - name: Build debug APK
         working-directory: source
-        run: gradle --no-daemon :android:assembleDebug
+        run: gradle --no-daemon --stacktrace :android:assembleDebug
 
       - name: Upload installable APK
         uses: actions/upload-artifact@v4
