@@ -77,6 +77,9 @@ jobs:
       - name: Apply Diyse v0.02 identity and save-schema pass
         run: python ci/patch-v002.py
 
+      - name: Repair missing runtime artwork references
+        run: python ci/patch-runtime-assets.py
+
       - name: Package reconstructed v0.02 source
         run: zip -qr Diyse-v0.02-runtime-source.zip source
 
@@ -140,7 +143,7 @@ jobs:
         if: steps.build_apk.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
-          name: Diyse-Prototype-v0.02-APK
+          name: Diyse-Prototype-v0.02-Runtime-Fix-APK
           path: source/android/build/outputs/apk/debug/android-debug.apk
           if-no-files-found: error
           retention-days: 30
