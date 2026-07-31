@@ -74,18 +74,62 @@ jobs:
       - name: Patch and verify save-button behavior
         run: python ci/patch-save-button.py
 
+      - name: Apply Diyse v0.02 identity and save-schema pass
+        run: python ci/patch-v002.py
+
       - name: Run combat and progression tests
         working-directory: source
         run: gradle --no-daemon --stacktrace :core:test
 
       - name: Build debug APK
+        id: build_apk
+        continue-on-error: true
         working-directory: source
-        run: gradle --no-daemon --stacktrace :android:assembleDebug
+        shell: bash
+        run: |
+          set -o pipefail
+          gradle --no-daemon --stacktrace :android:assembleDebug 2>&1 | tee ../android-build.log
 
-      - name: Upload installable APK
+      - name: Create compact compiler diagnostic
+        if: steps.build_apk.outcome == 'failure'
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          source = Path("android-build.log")
+          text = source.read_text(errors="replace") if source.exists() else "Android build log was not created."
+          lines = text.splitlines()
+          important = []
+          markers = (" error:", "FAILURE:", "What went wrong:", "Execution failed for task", "Caused by:", "A failure occurred while executing")
+          for index, line in enumerate(lines):
+              if any(marker in line for marker in markers):
+                  start = max(0, index - 4)
+                  end = min(len(lines), index + 12)
+                  important.extend(lines[start:end])
+                  important.append("---")
+          if not important:
+              important = lines[-250:]
+          Path("android-build-compact.log").write_text("\n".join(important[-500:]) + "\n")
+          PY
+
+      - name: Upload Android compiler diagnostic
+        if: steps.build_apk.outcome == 'failure'
         uses: actions/upload-artifact@v4
         with:
-          name: Diyse-Prototype-v0.01-Save-Fix-APK
+          name: Diyse-v0.02-Android-Build-Diagnostic
+          path: android-build-compact.log
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Stop after Android build failure
+        if: steps.build_apk.outcome == 'failure'
+        run: exit 1
+
+      - name: Upload installable APK
+        if: steps.build_apk.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: Diyse-Prototype-v0.02-APK
           path: source/android/build/outputs/apk/debug/android-debug.apk
           if-no-files-found: error
           retention-days: 30
