@@ -77,6 +77,17 @@ jobs:
       - name: Apply Diyse v0.02 identity and save-schema pass
         run: python ci/patch-v002.py
 
+      - name: Package reconstructed v0.02 source
+        run: zip -qr Diyse-v0.02-runtime-source.zip source
+
+      - name: Upload reconstructed v0.02 source
+        uses: actions/upload-artifact@v4
+        with:
+          name: Diyse-v0.02-Runtime-Source
+          path: Diyse-v0.02-runtime-source.zip
+          if-no-files-found: error
+          retention-days: 7
+
       - name: Run combat and progression tests
         working-directory: source
         run: gradle --no-daemon --stacktrace :core:test
