@@ -71,6 +71,9 @@ jobs:
           gradle_path.write_text(gradle.replace(marker, replacement, 1))
           PY
 
+      - name: Patch and verify save-button behavior
+        run: python ci/patch-save-button.py
+
       - name: Run combat and progression tests
         working-directory: source
         run: gradle --no-daemon --stacktrace :core:test
@@ -82,7 +85,7 @@ jobs:
       - name: Upload installable APK
         uses: actions/upload-artifact@v4
         with:
-          name: Diyse-Prototype-v0.01-APK
+          name: Diyse-Prototype-v0.01-Save-Fix-APK
           path: source/android/build/outputs/apk/debug/android-debug.apk
           if-no-files-found: error
           retention-days: 30
