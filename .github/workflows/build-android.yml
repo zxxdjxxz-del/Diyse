@@ -83,6 +83,9 @@ jobs:
       - name: Apply Diyse v0.03 party, objective, and signing pass
         run: python ci/patch-v003.py
 
+      - name: Apply Diyse v0.04 core-menu and exploration pass
+        run: python ci/patch-v004.py
+
       - name: Verify permanent prototype signing certificate
         run: |
           keytool -list -v \
@@ -91,18 +94,18 @@ jobs:
             -alias diyse-prototype | tee prototype-certificate.txt
           grep -F "SHA256: BF:03:40:D1:A6:CC:6B:CB:C2:65:4C:F0:5E:53:EC:39:60:2C:47:0D:CB:1E:CC:88:C6:15:74:10:40:99:C0:73" prototype-certificate.txt
 
-      - name: Package reconstructed v0.03 source
-        run: zip -qr Diyse-v0.03-runtime-source.zip source
+      - name: Package reconstructed v0.04 source
+        run: zip -qr Diyse-v0.04-runtime-source.zip source
 
-      - name: Upload reconstructed v0.03 source
+      - name: Upload reconstructed v0.04 source
         uses: actions/upload-artifact@v4
         with:
-          name: Diyse-v0.03-Runtime-Source
-          path: Diyse-v0.03-runtime-source.zip
+          name: Diyse-v0.04-Runtime-Source
+          path: Diyse-v0.04-runtime-source.zip
           if-no-files-found: error
           retention-days: 7
 
-      - name: Run combat, progression, and version tests
+      - name: Run combat, progression, menu, inventory, and version tests
         working-directory: source
         run: gradle --no-daemon --stacktrace :core:test
 
@@ -148,7 +151,7 @@ jobs:
         if: steps.build_apk.outcome == 'failure'
         uses: actions/upload-artifact@v4
         with:
-          name: Diyse-v0.03-Android-Build-Diagnostic
+          name: Diyse-v0.04-Android-Build-Diagnostic
           path: android-build-compact.log
           if-no-files-found: error
           retention-days: 7
@@ -161,7 +164,7 @@ jobs:
         if: steps.build_apk.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
-          name: Diyse-Prototype-v0.03-APK
+          name: Diyse-Prototype-v0.04-APK
           path: |
             source/android/build/outputs/apk/debug/android-debug.apk
             apk-signature.txt
