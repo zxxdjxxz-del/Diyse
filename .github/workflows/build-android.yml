@@ -80,18 +80,29 @@ jobs:
       - name: Repair missing runtime artwork references
         run: python ci/patch-runtime-assets.py
 
-      - name: Package reconstructed v0.02 source
-        run: zip -qr Diyse-v0.02-runtime-source.zip source
+      - name: Apply Diyse v0.03 party, objective, and signing pass
+        run: python ci/patch-v003.py
 
-      - name: Upload reconstructed v0.02 source
+      - name: Verify permanent prototype signing certificate
+        run: |
+          keytool -list -v \
+            -keystore source/android/prototype-signing/diyse-prototype.keystore \
+            -storepass diyse-prototype-2026 \
+            -alias diyse-prototype | tee prototype-certificate.txt
+          grep -F "SHA256: BF:03:40:D1:A6:CC:6B:CB:C2:65:4C:F0:5E:53:EC:39:60:2C:47:0D:CB:1E:CC:88:C6:15:74:10:40:99:C0:73" prototype-certificate.txt
+
+      - name: Package reconstructed v0.03 source
+        run: zip -qr Diyse-v0.03-runtime-source.zip source
+
+      - name: Upload reconstructed v0.03 source
         uses: actions/upload-artifact@v4
         with:
-          name: Diyse-v0.02-Runtime-Source
-          path: Diyse-v0.02-runtime-source.zip
+          name: Diyse-v0.03-Runtime-Source
+          path: Diyse-v0.03-runtime-source.zip
           if-no-files-found: error
           retention-days: 7
 
-      - name: Run combat and progression tests
+      - name: Run combat, progression, and version tests
         working-directory: source
         run: gradle --no-daemon --stacktrace :core:test
 
@@ -103,6 +114,13 @@ jobs:
         run: |
           set -o pipefail
           gradle --no-daemon --stacktrace :android:assembleDebug 2>&1 | tee ../android-build.log
+
+      - name: Verify built APK signature
+        if: steps.build_apk.outcome == 'success'
+        run: |
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs \
+            source/android/build/outputs/apk/debug/android-debug.apk | tee apk-signature.txt
+          grep -i "bf0340d1a6cc6bcbc2654cf05e53ec39602c470dcb1ecc88c61574104099c073" apk-signature.txt
 
       - name: Create compact compiler diagnostic
         if: steps.build_apk.outcome == 'failure'
@@ -130,7 +148,7 @@ jobs:
         if: steps.build_apk.outcome == 'failure'
         uses: actions/upload-artifact@v4
         with:
-          name: Diyse-v0.02-Android-Build-Diagnostic
+          name: Diyse-v0.03-Android-Build-Diagnostic
           path: android-build-compact.log
           if-no-files-found: error
           retention-days: 7
@@ -143,7 +161,10 @@ jobs:
         if: steps.build_apk.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
-          name: Diyse-Prototype-v0.02-Runtime-Fix-APK
-          path: source/android/build/outputs/apk/debug/android-debug.apk
+          name: Diyse-Prototype-v0.03-APK
+          path: |
+            source/android/build/outputs/apk/debug/android-debug.apk
+            apk-signature.txt
+            prototype-certificate.txt
           if-no-files-found: error
           retention-days: 30
