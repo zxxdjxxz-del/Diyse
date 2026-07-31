@@ -6,8 +6,8 @@ import zipfile
 
 root = Path("source")
 parts = sorted((Path("ci") / "v006a").glob("part-*.txt"))
-if len(parts) != 3:
-    raise SystemExit(f"Expected 3 Diyse v0.06A payload parts, found {len(parts)}")
+if len(parts) != 7:
+    raise SystemExit(f"Expected 7 Diyse v0.06A payload parts, found {len(parts)}")
 
 payload_text = "".join(part.read_text().strip() for part in parts)
 try:
