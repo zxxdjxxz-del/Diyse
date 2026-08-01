@@ -1,0 +1,54 @@
+retired fields remain in production Java.
+for java in (root / 'core/src/main/java').rglob('*.java'):
+    text = java.read_text()
+    if 'resource' in text.lower() and java.name not in {'GameState.java'}:
+        # GameState intentionally retains legacy save-key strings for migration only.
+        raise SystemExit(f'retired resource wording remains in {java}')
+
+# Final reconstruction guards.
+required = [
+    'core/src/main/java/com/dj/diyse/model/CardDefinition.java',
+    'core/src/main/java/com/dj/diyse/model/CardLoadout.java',
+    'core/src/main/java/com/dj/diyse/combat/CardBattleState.java',
+    'core/src/test/java/com/dj/diyse/model/CardFoundationTest.java',
+    'docs/CHANGELOG_v0.07.md',
+]
+for relative in required:
+    if not (root / relative).is_file():
+        raise SystemExit(f'v0.07 did not create {relative}')
+
+character = (root / 'core/src/main/java/com/dj/diyse/model/CharacterState.java').read_text()
+for marker in ('public int mp;', 'public int maxMp;', 'public CardLoadout cardLoadout'):
+    if marker not in character:
+        raise SystemExit(f'v0.07 CharacterState verification failed for {marker}')
+for forbidden in ('public int resource;', 'public int maxResource;'):
+    if forbidden in character:
+        raise SystemExit(f'v0.07 retained retired field {forbidden}')
+
+game_state = (root / 'core/src/main/java/com/dj/diyse/model/GameState.java').read_text()
+for marker in ('SAVE_SCHEMA_VERSION = 4', 'if (schema >= 3)', 'hasMpKeys', 'standard_card_0', 'putString("save_build", "0.07")'):
+    if marker not in game_state:
+        raise SystemExit(f'v0.07 save migration verification failed for {marker}')
+
+battle = (root / 'core/src/main/java/com/dj/diyse/screens/BattleScreen.java').read_text()
+for marker in ('actor.mp < actor.ability.cost', 'CardBattleState', 'cardBattleState.consume', '[TEST ONLY]', 'Items → Defend → Speed.'):
+    if marker not in battle:
+        raise SystemExit(f'v0.07 battle verification failed for {marker}')
+for forbidden in ('cardUsed', 'actor.resource', 'member.resource', 'maxResource'):
+    if forbidden in battle:
+        raise SystemExit(f'v0.07 battle retained retired marker {forbidden}')
+
+menu = (root / 'core/src/main/java/com/dj/diyse/screens/MenuScreen.java').read_text()
+for marker in ('two Standard slots and one personal Prime slot', 'no Card Affinity system exists', 'member.mp + "/" + member.maxMp'):
+    if marker not in menu:
+        raise SystemExit(f'v0.07 menu verification failed for {marker}')
+
+android_gradle = (root / 'android/build.gradle').read_text()
+for marker in ('versionCode 11', "versionName '0.07'", 'diyse-prototype.keystore', 'signingConfig signingConfigs.prototype'):
+    if marker not in android_gradle:
+        raise SystemExit(f'v0.07 Android verification failed for {marker}')
+
+if (root / 'android/prototype-signing/diyse-prototype.keystore').stat().st_size < 1000:
+    raise SystemExit('v0.07 permanent prototype keystore is missing or truncated')
+
+print('Applied Diyse Prototype v0.07 MP and Card foundation pass.')
