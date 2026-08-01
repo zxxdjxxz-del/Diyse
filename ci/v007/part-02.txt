@@ -1,0 +1,83 @@
+.cardLoadout.standardCardId(0)))
+                    && verification.getString(prefix + "standard_card_1", "").equals(nullToEmpty(member.cardLoadout.standardCardId(1)))
+                    && verification.getString(prefix + "prime_card", "").equals(nullToEmpty(member.cardLoadout.primeCardId()));''')
+t = t.replace('        preferences.putInteger(prefix + "resource", member.resource);\n        preferences.putInteger(prefix + "max_resource", member.maxResource);', '''        preferences.putInteger(prefix + "mp", member.mp);
+        preferences.putInteger(prefix + "max_mp", member.maxMp);
+        for (int slot = 0; slot < CardLoadout.STANDARD_SLOT_COUNT; slot++) {
+            preferences.putString(prefix + "standard_card_" + slot, nullToEmpty(member.cardLoadout.standardCardId(slot)));
+        }
+        preferences.putString(prefix + "prime_card", nullToEmpty(member.cardLoadout.primeCardId()));''')
+t = t.replace('    static String stableMemberPrefix(String id) {', '''    private static String nullToEmpty(String value) {
+        return value == null ? "" : value;
+    }
+
+    static String stableMemberPrefix(String id) {''')
+p.write_text(t)
+
+# Menu: real slot framework, explicit prototype-only Card, and MP wording.
+p = root / 'core/src/main/java/com/dj/diyse/screens/MenuScreen.java'
+t = p.read_text()
+t = t.replace('import com.dj.diyse.model.CharacterState;\n', 'import com.dj.diyse.model.CardDefinition;\nimport com.dj.diyse.model.CardLoadout;\nimport com.dj.diyse.model.CharacterState;\nimport com.dj.diyse.model.PrototypeData;\n')
+t = t.replace('member.resource + "/" + member.maxResource', 'member.mp + "/" + member.maxMp')
+old_cards = '''    private void showCards() {
+        reset("CARDS", "Diysean Card effects are not yet implemented in this prototype menu.");
+        for (CharacterState member : game.state().partyCopy()) {
+            Label name = new Label(member.name, game.skin(), "gold");
+            Label slots = new Label("Standard Card slots: 0/2 equipped   Personal Prime Card slot: empty", game.skin());
+            content.add(name).width(240f).left();
+            content.add(slots).width(640f).left().row();
+        }
+        Label note = new Label("Enemies do not use Diysean Cards. Card content will be added only after the effect sheets are authored and approved.", game.skin(), "muted");
+        note.setWrap(true);
+        content.add(note).width(880f).colspan(2).left().padTop(18f).row();
+    }
+'''
+new_cards = '''    private void showCards() {
+        reset("CARDS", "Loadout foundation test: every character has two Standard slots and one personal Prime slot. Full Card content remains pending authored effect sheets.");
+        for (CharacterState member : game.state().partyCopy()) {
+            Label name = new Label(member.name, game.skin(), "gold");
+            StringBuilder loadout = new StringBuilder();
+            for (int slot = 0; slot < CardLoadout.STANDARD_SLOT_COUNT; slot++) {
+                CardDefinition card = PrototypeData.cardById(member.cardLoadout.standardCardId(slot));
+                loadout.append("Standard ").append(slot + 1).append(": ")
+                    .append(card == null ? "Empty" : card.name + " [TEST ONLY] — " + card.usesPerBattle + " use/battle")
+                    .append("\\n");
+            }
+            loadout.append("Personal Prime: ")
+                .append(member.cardLoadout.primeCardId() == null ? "Empty" : member.cardLoadout.primeCardId());
+            Label slots = new Label(loadout.toString(), game.skin());
+            slots.setWrap(true);
+            content.add(name).width(240f).left();
+            content.add(slots).width(640f).left().row();
+        }
+        Label note = new Label("The Prototype Standard Card exists only to test slot persistence, battle-local uses, and reset behavior. It is not one of the approved 35 Standard Cards. Enemies do not use Diysean Cards, and no Card Affinity system exists.", game.skin(), "muted");
+        note.setWrap(true);
+        content.add(note).width(880f).colspan(2).left().padTop(18f).row();
+    }
+'''
+if old_cards not in t: raise SystemExit('menu card block missing')
+t = t.replace(old_cards, new_cards, 1)
+t = t.replace('Manual saves store position, objectives, inventory, HP, resources, levels, and individual XP.', 'Manual saves store position, objectives, inventory, HP, MP, Card loadouts, levels, and individual XP.')
+p.write_text(t)
+
+# Battle: MP-only references and battle-local Card uses.
+p = root / 'core/src/main/java/com/dj/diyse/screens/BattleScreen.java'
+t = p.read_text()
+t = t.replace('import com.dj.diyse.combat.BattlePresentation;\n', 'import com.dj.diyse.combat.BattlePresentation;\nimport com.dj.diyse.combat.CardBattleState;\n')
+t = t.replace('import com.dj.diyse.model.CharacterState;\n', 'import com.dj.diyse.model.CardDefinition;\nimport com.dj.diyse.model.CharacterState;\n')
+t = t.replace('    private final boolean[] cardUsed;\n', '    private final CardBattleState cardBattleState;\n')
+t = t.replace('    private int pendingActor = -1;\n', '    private int pendingActor = -1;\n    private int pendingCardSlot = -1;\n')
+t = t.replace('        cardUsed = new boolean[party.size];\n', '        cardBattleState = new CardBattleState(party);\n')
+t = t.replace('actor.resource < actor.ability.cost', 'actor.mp < actor.ability.cost')
+t = t.replace('appendLog(actor.name + " lacks the resource for " + actor.ability.name + ".");', 'appendLog(actor.name + " lacks MP for " + actor.ability.name + ".");')
+t = t.replace('''        if (command.equals("Card") && cardUsed[currentSelector]) {
+            appendLog(actor.name + " already used the prototype Card this battle.");
+            return;
+        }
+''', '''        if (command.equals("Card")) {
+            pendingCardSlot = cardBattleState.firstUsableStandardSlot(currentSelector);
+            if (pendingCardSlot < 0) {
+                appendLog(actor.name + " has no equipped Standard Card use remaining this battle.");
+                return;
+            }
+        }

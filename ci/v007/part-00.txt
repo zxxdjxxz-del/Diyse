@@ -1,0 +1,156 @@
+from pathlib import Path
+
+root = Path('source')
+
+def replace_once(rel, old, new):
+    p = root / rel
+    t = p.read_text()
+    if old not in t:
+        raise SystemExit(f'missing marker in {rel}: {old[:120]!r}')
+    p.write_text(t.replace(old, new, 1))
+
+# Version and Android metadata.
+replace_once('core/src/main/java/com/dj/diyse/DiyseGame.java', 'VERSION = "0.06E"', 'VERSION = "0.07"')
+replace_once('android/build.gradle', 'versionCode 10', 'versionCode 11')
+replace_once('android/build.gradle', "versionName '0.06E'", "versionName '0.07'")
+replace_once('core/src/test/java/com/dj/diyse/VersionContractTest.java', 'void v006dPreservesSaveSchemaThree()', 'void v007IntroducesMigratingSaveSchemaFour()')
+replace_once('core/src/test/java/com/dj/diyse/VersionContractTest.java', 'assertEquals("0.06E", DiyseGame.VERSION);', 'assertEquals("0.07", DiyseGame.VERSION);')
+replace_once('core/src/test/java/com/dj/diyse/VersionContractTest.java', 'assertEquals(3, GameState.saveSchemaVersion());', 'assertEquals(4, GameState.saveSchemaVersion());')
+
+# Card foundation model.
+(root / 'core/src/main/java/com/dj/diyse/model/CardDefinition.java').write_text('''package com.dj.diyse.model;
+
+/**
+ * Authored Card metadata used by the prototype loadout and battle-use framework.
+ * The current catalog contains only an explicitly non-canon diagnostics Card.
+ */
+public final class CardDefinition {
+    public enum SlotType { STANDARD, PRIME }
+    public enum EffectKind { MAGIC_DAMAGE }
+
+    public final String id;
+    public final String name;
+    public final SlotType slotType;
+    public final EffectKind effectKind;
+    public final int power;
+    public final int usesPerBattle;
+    public final boolean prototypeOnly;
+
+    public CardDefinition(String id, String name, SlotType slotType, EffectKind effectKind,
+                          int power, int usesPerBattle, boolean prototypeOnly) {
+        if (id == null || id.isBlank()) throw new IllegalArgumentException("Card id is required.");
+        if (name == null || name.isBlank()) throw new IllegalArgumentException("Card name is required.");
+        if (slotType == null || effectKind == null) throw new IllegalArgumentException("Card type and effect are required.");
+        if (power < 0 || usesPerBattle < 0) throw new IllegalArgumentException("Card values cannot be negative.");
+        this.id = id;
+        this.name = name;
+        this.slotType = slotType;
+        this.effectKind = effectKind;
+        this.power = power;
+        this.usesPerBattle = usesPerBattle;
+        this.prototypeOnly = prototypeOnly;
+    }
+}
+''')
+
+(root / 'core/src/main/java/com/dj/diyse/model/CardLoadout.java').write_text('''package com.dj.diyse.model;
+
+import java.util.Arrays;
+
+/** Two Standard slots and one personal Prime slot. No Card Affinity exists. */
+public final class CardLoadout {
+    public static final int STANDARD_SLOT_COUNT = 2;
+
+    private final String[] standardCardIds = new String[STANDARD_SLOT_COUNT];
+    private String primeCardId;
+
+    public String standardCardId(int slot) {
+        requireStandardSlot(slot);
+        return standardCardIds[slot];
+    }
+
+    public void setStandardCardId(int slot, String cardId) {
+        requireStandardSlot(slot);
+        standardCardIds[slot] = normalize(cardId);
+    }
+
+    public String primeCardId() {
+        return primeCardId;
+    }
+
+    public void setPrimeCardId(String cardId) {
+        primeCardId = normalize(cardId);
+    }
+
+    public int equippedStandardCount() {
+        int count = 0;
+        for (String cardId : standardCardIds) if (cardId != null) count++;
+        return count;
+    }
+
+    public CardLoadout copy() {
+        CardLoadout copy = new CardLoadout();
+        System.arraycopy(standardCardIds, 0, copy.standardCardIds, 0, STANDARD_SLOT_COUNT);
+        copy.primeCardId = primeCardId;
+        return copy;
+    }
+
+    private static String normalize(String value) {
+        return value == null || value.isBlank() ? null : value;
+    }
+
+    private static void requireStandardSlot(int slot) {
+        if (slot < 0 || slot >= STANDARD_SLOT_COUNT) {
+            throw new IndexOutOfBoundsException("Standard Card slot " + slot + " is invalid.");
+        }
+    }
+
+    @Override
+    public String toString() {
+        return "CardLoadout{standard=" + Arrays.toString(standardCardIds) + ", prime=" + primeCardId + "}";
+    }
+}
+''')
+
+(root / 'core/src/main/java/com/dj/diyse/combat/CardBattleState.java').write_text('''package com.dj.diyse.combat;
+
+import com.badlogic.gdx.utils.Array;
+import com.dj.diyse.model.CardDefinition;
+import com.dj.diyse.model.CardLoadout;
+import com.dj.diyse.model.CharacterState;
+import com.dj.diyse.model.PrototypeData;
+
+/** Battle-local Card uses. Constructing a new battle resets every equipped Card. */
+public final class CardBattleState {
+    private final int[][] remaining;
+
+    public CardBattleState(Array<CharacterState> party) {
+        remaining = new int[party.size][CardLoadout.STANDARD_SLOT_COUNT];
+        for (int actor = 0; actor < party.size; actor++) {
+            CharacterState member = party.get(actor);
+            for (int slot = 0; slot < CardLoadout.STANDARD_SLOT_COUNT; slot++) {
+                CardDefinition card = PrototypeData.cardById(member.cardLoadout.standardCardId(slot));
+                remaining[actor][slot] = card == null ? 0 : card.usesPerBattle;
+            }
+        }
+    }
+
+    public int firstUsableStandardSlot(int actorIndex) {
+        requireActor(actorIndex);
+        for (int slot = 0; slot < CardLoadout.STANDARD_SLOT_COUNT; slot++) {
+            if (remaining[actorIndex][slot] > 0) return slot;
+        }
+        return -1;
+    }
+
+    public int remaining(int actorIndex, int slot) {
+        require(actorIndex, slot);
+        return remaining[actorIndex][slot];
+    }
+
+    public boolean consume(int actorIndex, int slot) {
+        require(actorIndex, slot);
+        if (remaining[actorIndex][slot] <= 0) return false;
+        remaining[actorIndex][slot]--;
+        return true;
+    }

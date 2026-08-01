@@ -1,0 +1,90 @@
+
+    private void requireActor(int actorIndex) {
+        if (actorIndex < 0 || actorIndex >= remaining.length) throw new IndexOutOfBoundsException("Invalid actor index.");
+    }
+
+    private void require(int actorIndex, int slot) {
+        requireActor(actorIndex);
+        if (slot < 0 || slot >= CardLoadout.STANDARD_SLOT_COUNT) throw new IndexOutOfBoundsException("Invalid Standard Card slot.");
+    }
+}
+''')
+
+# CharacterState: MP-only and Card loadout.
+p = root / 'core/src/main/java/com/dj/diyse/model/CharacterState.java'
+t = p.read_text()
+t = t.replace('    public int resource;\n    public int maxResource;\n', '    public int mp;\n    public int maxMp;\n')
+t = t.replace('    public Ability ability;\n', '    public Ability ability;\n    public CardLoadout cardLoadout = new CardLoadout();\n')
+t = t.replace('        copy.resource = resource;\n        copy.maxResource = maxResource;\n', '        copy.mp = mp;\n        copy.maxMp = maxMp;\n')
+t = t.replace('        copy.ability = ability.copy();\n', '        copy.ability = ability.copy();\n        copy.cardLoadout = cardLoadout.copy();\n')
+t = t.replace('            maxResource += 1;\n', '            maxMp += 1;\n')
+t = t.replace('        resource = maxResource;\n', '        mp = maxMp;\n')
+p.write_text(t)
+
+# Prototype data and the one explicitly diagnostic Standard Card.
+p = root / 'core/src/main/java/com/dj/diyse/model/PrototypeData.java'
+t = p.read_text()
+t = t.replace('public final class PrototypeData {\n    private PrototypeData() {}\n', '''public final class PrototypeData {
+    public static final String PROTOTYPE_STANDARD_CARD_ID = "prototype_standard_diagnostics";
+
+    private PrototypeData() {}
+
+    public static CardDefinition cardById(String id) {
+        if (!PROTOTYPE_STANDARD_CARD_ID.equals(id)) return null;
+        return new CardDefinition(
+            PROTOTYPE_STANDARD_CARD_ID,
+            "Prototype Standard Card",
+            CardDefinition.SlotType.STANDARD,
+            CardDefinition.EffectKind.MAGIC_DAMAGE,
+            20,
+            1,
+            true
+        );
+    }
+''')
+t = t.replace('    private static CharacterState character(String id, String name, String prototypeRole, int hp, int resource, int attack,\n', '    private static CharacterState character(String id, String name, String prototypeRole, int hp, int mp, int attack,\n')
+t = t.replace('        value.resource = resource;\n        value.maxResource = resource;\n', '        value.mp = mp;\n        value.maxMp = mp;\n        value.cardLoadout.setStandardCardId(0, PROTOTYPE_STANDARD_CARD_ID);\n')
+p.write_text(t)
+
+# BattleAction carries the selected Standard slot without affecting action ordering.
+p = root / 'core/src/main/java/com/dj/diyse/combat/BattleAction.java'
+t = p.read_text()
+t = t.replace('    public int selectionOrder;\n', '    public int selectionOrder;\n    public int cardSlot = -1;\n')
+p.write_text(t)
+
+# GameState schema 4, MP migration, and persisted loadout IDs.
+p = root / 'core/src/main/java/com/dj/diyse/model/GameState.java'
+t = p.read_text()
+t = t.replace('private static final int SAVE_SCHEMA_VERSION = 3;', 'private static final int SAVE_SCHEMA_VERSION = 4;')
+t = t.replace('if (schema >= SAVE_SCHEMA_VERSION) {', 'if (schema >= 3) {', 1)
+t = t.replace('Preserve completed v0.03 saves instead of forcing completed players through the new tutorial sequence.', 'Preserve completed pre-schema-3 saves instead of forcing completed players through the tutorial sequence.')
+t = t.replace('            loadMember(preferences, prefix, member);', '            loadMember(preferences, prefix, member, schema);')
+t = t.replace('    private static void loadMember(Preferences preferences, String prefix, CharacterState member) {', '    private static void loadMember(Preferences preferences, String prefix, CharacterState member, int schema) {')
+t = t.replace('        member.resource = preferences.getInteger(prefix + "resource", member.maxResource);\n        member.maxResource = preferences.getInteger(prefix + "max_resource", member.maxResource);', '''        boolean hasMpKeys = schema >= 4 && preferences.contains(prefix + "mp");
+        member.mp = preferences.getInteger(prefix + (hasMpKeys ? "mp" : "resource"), member.maxMp);
+        member.maxMp = preferences.getInteger(prefix + (hasMpKeys ? "max_mp" : "max_resource"), member.maxMp);''')
+t = t.replace('        member.speed = preferences.getInteger(prefix + "speed", member.speed);\n', '''        member.speed = preferences.getInteger(prefix + "speed", member.speed);
+        if (schema >= 4) {
+            for (int slot = 0; slot < CardLoadout.STANDARD_SLOT_COUNT; slot++) {
+                String savedId = preferences.getString(
+                    prefix + "standard_card_" + slot,
+                    nullToEmpty(member.cardLoadout.standardCardId(slot))
+                );
+                CardDefinition card = PrototypeData.cardById(savedId);
+                member.cardLoadout.setStandardCardId(
+                    slot,
+                    card != null && card.slotType == CardDefinition.SlotType.STANDARD ? savedId : null
+                );
+            }
+            String savedPrime = preferences.getString(
+                prefix + "prime_card",
+                nullToEmpty(member.cardLoadout.primeCardId())
+            );
+            CardDefinition prime = PrototypeData.cardById(savedPrime);
+            member.cardLoadout.setPrimeCardId(prime != null && prime.slotType == CardDefinition.SlotType.PRIME ? savedPrime : null);
+        }
+''')
+t = t.replace('preferences.putString("save_build", "0.06E");', 'preferences.putString("save_build", "0.07");')
+t = t.replace('                    && verification.getInteger(prefix + "resource", -1) == member.resource;', '''                    && verification.getInteger(prefix + "mp", -1) == member.mp
+                    && verification.getInteger(prefix + "max_mp", -1) == member.maxMp
+                    && verification.getString(prefix + "standard_card_0", "").equals(nullToEmpty(member
