@@ -1,0 +1,97 @@
+loadout IDs and battle-local use tracking that resets whenever a new battle begins.
+- Replaces the old universal generic Card flag with one explicitly test-only Prototype Standard Card in Standard slot 1.
+- The diagnostics Card's one-use limit is specific to that temporary Card and is not a universal Card rule.
+- Standard slot 2 and the personal Prime slot remain empty pending approved effect sheets.
+- Enemies still do not use Diysean Cards. No Card Affinity system exists.
+- This pass does not author or claim membership in the approved collection of 35 Standard Cards and 12 Prime Cards.
+- Preserves the device-tested v0.06E field and battle graphics, Item → Defend → Speed order, enemy action locking, formulas, XP, progression, victory/defeat behavior, and permanent signing identity.
+- Uses the current v0.80 active master canon authority.
+''')
+
+check = root / 'docs/TEST_CHECKLIST.md'
+check.write_text(check.read_text() + '''\n## v0.07 MP and Card Foundation\n- [ ] Existing v0.06E save installs and loads without losing position, objectives, inventory, HP, levels, or XP.\n- [ ] Party screens and battle UI show MP rather than a generic resource.\n- [ ] Abilities spend MP and remain repeatable while enough MP remains.\n- [ ] Every character shows two Standard slots and one personal Prime slot.\n- [ ] Prototype Standard Card appears only in Standard slot 1 and is labeled TEST ONLY.\n- [ ] The Card use is tracked independently per character and resets in a new battle.\n- [ ] Enemies never receive a Cards command.\n- [ ] Field graphics, battle orientation, action order, damage, victory, and saving remain unchanged.\n''')
+
+# Data and repository-facing version notes.
+(root / 'assets/data/characters.json').write_text('''{
+  "prototypeVersion": "0.07",
+  "provisionalBalance": true,
+  "ordinaryAbilityResource": "MP",
+  "cardSlots": {"standard": 2, "personalPrime": 1},
+  "characters": [
+    {"id":"cyanis","name":"Cyanis","role":"Crest Knight","ability":"Crest Breaker"},
+    {"id":"ilyra","name":"Ilyra","role":"Early Healer","ability":"Restoring Seal"},
+    {"id":"torren","name":"Torren","role":"Frontline Guard","ability":"Shield Ram"}
+  ]
+}
+''')
+
+readme = root / 'README.md'
+readme_text = readme.read_text()
+readme_text = readme_text.replace('# Diyse — libGDX Android Prototype v0.02', '# Diyse — libGDX Android Prototype v0.07')
+readme_text = readme_text.replace('Attack, Ability, Card, Item, and Defend commands', 'Attack, Ability, Card, Item, and Defend commands\n- MP-only ordinary Abilities\n- Two Standard Card slots and one personal Prime Card slot per character\n- Battle-local Card uses that reset when a new battle begins')
+readme_text = readme_text.replace('artifact **Diyse-Prototype-v0.02-APK**', 'artifact **Diyse-Prototype-v0.07-APK**')
+readme_text = readme_text.replace('Download **Diyse-Prototype-v0.02-APK** from Artifacts.', 'Download **Diyse-Prototype-v0.07-APK** from Artifacts.')
+readme.write_text(readme_text)
+
+# Tests.
+p = root / 'core/src/test/java/com/dj/diyse/model/CombatIdentityTest.java'
+t = p.read_text().replace('void earlyPartyAbilitiesUseDistinctResourceCosts()', 'void earlyPartyAbilitiesUseDistinctMpCosts()')
+t = t.replace('import static org.junit.jupiter.api.Assertions.assertNotEquals;\n', 'import static org.junit.jupiter.api.Assertions.assertNotEquals;\nimport static org.junit.jupiter.api.Assertions.assertThrows;\n')
+t = t.replace('        assertNotEquals(party.get(0).ability.kind, party.get(1).ability.kind);\n', '''        assertNotEquals(party.get(0).ability.kind, party.get(1).ability.kind);
+        assertEquals(10, party.get(0).mp);
+        assertEquals(10, party.get(0).maxMp);
+        assertThrows(NoSuchFieldException.class, () -> CharacterState.class.getField("resource"));
+        assertThrows(NoSuchFieldException.class, () -> CharacterState.class.getField("maxResource"));
+''')
+p.write_text(t)
+
+p = root / 'core/src/test/java/com/dj/diyse/model/PrototypeDataTest.java'
+t = p.read_text().replace('assertEquals(3, GameState.saveSchemaVersion());', 'assertEquals(4, GameState.saveSchemaVersion());')
+p.write_text(t)
+
+(root / 'core/src/test/java/com/dj/diyse/model/CardFoundationTest.java').write_text('''package com.dj.diyse.model;
+
+import com.dj.diyse.combat.CardBattleState;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+final class CardFoundationTest {
+    @Test
+    void everyPrototypeCharacterHasTwoStandardSlotsAndOnePersonalPrimeSlot() {
+        for (CharacterState member : PrototypeData.createParty()) {
+            assertEquals(2, CardLoadout.STANDARD_SLOT_COUNT);
+            assertEquals(PrototypeData.PROTOTYPE_STANDARD_CARD_ID, member.cardLoadout.standardCardId(0));
+            assertNull(member.cardLoadout.standardCardId(1));
+            assertNull(member.cardLoadout.primeCardId());
+        }
+    }
+
+    @Test
+    void diagnosticsCardIsExplicitlyStandardAndPrototypeOnly() {
+        CardDefinition card = PrototypeData.cardById(PrototypeData.PROTOTYPE_STANDARD_CARD_ID);
+        assertEquals(CardDefinition.SlotType.STANDARD, card.slotType);
+        assertTrue(card.prototypeOnly);
+        assertEquals(1, card.usesPerBattle);
+        assertThrows(NoSuchFieldException.class, () -> CharacterState.class.getField("cardAffinity"));
+    }
+
+    @Test
+    void usesAreIndependentAndResetWithEachBattleState() {
+        var party = PrototypeData.createParty();
+        CardBattleState firstBattle = new CardBattleState(party);
+        assertTrue(firstBattle.consume(0, 0));
+        assertFalse(firstBattle.consume(0, 0));
+        assertEquals(1, firstBattle.remaining(1, 0));
+
+        CardBattleState nextBattle = new CardBattleState(party);
+        assertEquals(1, nextBattle.remaining(0, 0));
+    }
+}
+''')
+
+# Ensure no 
