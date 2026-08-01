@@ -1,0 +1,175 @@
+name: Build Diyse Android APK
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle 8.9
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android packages
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0" "platform-tools"
+
+      - name: Reconstruct source archive
+        run: |
+          cat source_parts/source.part.* > Diyse_Source.zip
+          mkdir source
+          unzip -q Diyse_Source.zip -d source
+          test -f source/settings.gradle
+
+      - name: Patch prototype compatibility issues
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          art_path = Path("source/core/src/main/java/com/dj/diyse/ui/PrototypeArt.java")
+          art = art_path.read_text()
+          old_art = "        pixmap.fillEllipse(18, 8, 92, 24);"
+          new_art = """        pixmap.fillRectangle(28, 12, 72, 16);
+                  pixmap.fillCircle(28, 20, 8);
+                  pixmap.fillCircle(100, 20, 8);"""
+          if old_art not in art:
+              raise SystemExit("Expected fillEllipse call was not found.")
+          art_path.write_text(art.replace(old_art, new_art))
+
+          gradle_path = Path("source/android/build.gradle")
+          gradle = gradle_path.read_text()
+          marker = "configurations { natives }"
+          replacement = """configurations { natives }
+
+          configurations.configureEach {
+              resolutionStrategy.force 'androidx.core:core:1.15.0'
+          }"""
+          if marker not in gradle:
+              raise SystemExit("Expected Android configurations marker was not found.")
+          gradle_path.write_text(gradle.replace(marker, replacement, 1))
+          PY
+
+      - name: Patch and verify save-button behavior
+        run: python ci/patch-save-button.py
+
+      - name: Apply Diyse v0.02 identity and save-schema pass
+        run: python ci/patch-v002.py
+
+      - name: Repair missing runtime artwork references
+        run: python ci/patch-runtime-assets.py
+
+      - name: Apply Diyse v0.03 party, objective, and signing pass
+        run: python ci/patch-v003.py
+
+      - name: Apply Diyse v0.04 core-menu and exploration pass
+        run: python ci/patch-v004.py
+
+      - name: Apply Diyse v0.05 combat-depth pass
+        run: python ci/patch-v005.py
+
+      - name: Apply Diyse v0.06A fixed-camera graphics slice
+        run: python ci/patch-v006a.py
+
+      - name: Apply Diyse v0.06B field-presentation refinement
+        run: python ci/patch-v006b.py
+
+      - name: Package reconstructed v0.06B source
+        run: zip -qr Diyse-v0.06B-runtime-source.zip source
+
+      - name: Upload reconstructed v0.06B source
+        uses: actions/upload-artifact@v4
+        with:
+          name: Diyse-v0.06B-Runtime-Source
+          path: Diyse-v0.06B-runtime-source.zip
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Run combat, field interaction, walkmesh, presentation, progression, menu, inventory, and version tests
+        working-directory: source
+        run: gradle --no-daemon --stacktrace :core:test
+
+      - name: Build debug APK
+        id: build_apk
+        continue-on-error: true
+        working-directory: source
+        shell: bash
+        run: |
+          set -o pipefail
+          gradle --no-daemon --stacktrace :android:assembleDebug 2>&1 | tee ../android-build.log
+
+      - name: Verify built APK signature and certificate
+        if: steps.build_apk.outcome == 'success'
+        run: |
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs \
+            source/android/build/outputs/apk/debug/android-debug.apk | tee apk-signature.txt
+          grep -i "bf0340d1a6cc6bcbc2654cf05e53ec39602c470dcb1ecc88c61574104099c073" apk-signature.txt
+          cp apk-signature.txt prototype-certificate.txt
+
+      - name: Create compact compiler diagnostic
+        if: steps.build_apk.outcome == 'failure'
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          source = Path("android-build.log")
+          text = source.read_text(errors="replace") if source.exists() else "Android build log was not created."
+          lines = text.splitlines()
+          important = []
+          markers = (" error:", "FAILURE:", "What went wrong:", "Execution failed for task", "Caused by:", "A failure occurred while executing")
+          for index, line in enumerate(lines):
+              if any(marker in line for marker in markers):
+                  start = max(0, index - 4)
+                  end = min(len(lines), index + 12)
+                  important.extend(lines[start:end])
+                  important.append("---")
+          if not important:
+              important = lines[-250:]
+          Path("android-build-compact.log").write_text("\n".join(important[-500:]) + "\n")
+          PY
+
+      - name: Upload Android compiler diagnostic
+        if: steps.build_apk.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: Diyse-v0.06B-Android-Build-Diagnostic
+          path: android-build-compact.log
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Stop after Android build failure
+        if: steps.build_apk.outcome == 'failure'
+        run: exit 1
+
+      - name: Upload installable APK
+        if: steps.build_apk.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: Diyse-Prototype-v0.06B-APK
+          path: |
+            source/android/build/outputs/apk/debug/android-debug.apk
+            apk-signature.txt
+            prototype-certificate.txt
+          if-no-files-found: error
+          retention-days: 30
