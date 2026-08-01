@@ -95,18 +95,21 @@ jobs:
       - name: Apply Diyse v0.06B field-presentation refinement
         run: python ci/patch-v006b.py
 
-      - name: Package reconstructed v0.06B source
-        run: zip -qr Diyse-v0.06B-runtime-source.zip source
+      - name: Apply Diyse v0.06C battle graphics vertical slice
+        run: python ci/patch-v006c.py
 
-      - name: Upload reconstructed v0.06B source
+      - name: Package reconstructed v0.06C source
+        run: zip -qr Diyse-v0.06C-runtime-source.zip source
+
+      - name: Upload reconstructed v0.06C source
         uses: actions/upload-artifact@v4
         with:
-          name: Diyse-v0.06B-Runtime-Source
-          path: Diyse-v0.06B-runtime-source.zip
+          name: Diyse-v0.06C-Runtime-Source
+          path: Diyse-v0.06C-runtime-source.zip
           if-no-files-found: error
           retention-days: 7
 
-      - name: Run combat, field interaction, walkmesh, presentation, progression, menu, inventory, and version tests
+      - name: Run combat, battle presentation, field interaction, walkmesh, progression, menu, inventory, and version tests
         working-directory: source
         run: gradle --no-daemon --stacktrace :core:test
 
@@ -153,7 +156,7 @@ jobs:
         if: steps.build_apk.outcome == 'failure'
         uses: actions/upload-artifact@v4
         with:
-          name: Diyse-v0.06B-Android-Build-Diagnostic
+          name: Diyse-v0.06C-Android-Build-Diagnostic
           path: android-build-compact.log
           if-no-files-found: error
           retention-days: 7
@@ -166,7 +169,7 @@ jobs:
         if: steps.build_apk.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
-          name: Diyse-Prototype-v0.06B-APK
+          name: Diyse-Prototype-v0.06C-APK
           path: |
             source/android/build/outputs/apk/debug/android-debug.apk
             apk-signature.txt
