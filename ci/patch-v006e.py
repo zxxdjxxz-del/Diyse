@@ -75,21 +75,21 @@ public final class BattleArenaOrientation {
 
 (root / "core/src/test/java/com/dj/diyse/combat/BattleArenaOrientationTest.java").write_text('''package com.dj.diyse.combat;
 
-import static org.junit.Assert.assertArrayEquals;
+import org.junit.jupiter.api.Test;
 
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 
-public class BattleArenaOrientationTest {
+public final class BattleArenaOrientationTest {
     @Test
-    public void fullScreenArenaUsesOneVerticalCorrection() {
+    void fullScreenArenaUsesOneVerticalCorrection() {
         assertArrayEquals(new float[] { 0f, 720f, 1280f, -720f },
-            BattleArenaOrientation.upright(0f, 0f, 1280f, 720f), 0.0001f);
+            BattleArenaOrientation.upright(0f, 0f, 1280f, 720f));
     }
 
     @Test
-    public void screenShakeOffsetDoesNotChangeOrientation() {
+    void screenShakeOffsetDoesNotChangeOrientation() {
         assertArrayEquals(new float[] { 7f, 720f, 1280f, -720f },
-            BattleArenaOrientation.upright(7f, 0f, 1280f, 720f), 0.0001f);
+            BattleArenaOrientation.upright(7f, 0f, 1280f, 720f));
     }
 }
 ''')
