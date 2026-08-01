@@ -5,9 +5,16 @@ import io
 import zipfile
 
 root = Path("source")
-parts = sorted((Path("ci") / "v006c").glob("part-*.txt"))
-if len(parts) != 4:
-    raise SystemExit(f"Expected 4 Diyse v0.06C payload parts, found {len(parts)}")
+parts = [
+    Path("ci/v006c/part-00.txt"),
+    Path("ci/v006c/part-01.txt"),
+    Path("ci/v006c_safe/part-03.txt"),
+    Path("ci/v006c_safe/part-04.txt"),
+    Path("ci/v006c_safe/part-05.txt"),
+]
+for part in parts:
+    if not part.is_file():
+        raise SystemExit(f"Missing Diyse v0.06C payload segment: {part}")
 
 payload_text = "".join(part.read_text().strip() for part in parts)
 try:
