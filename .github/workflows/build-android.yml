@@ -107,18 +107,21 @@ jobs:
       - name: Apply Diyse v0.07 MP and Card foundation pass
         run: python ci/patch-v007.py
 
-      - name: Package reconstructed v0.07 source
-        run: zip -qr Diyse-v0.07-runtime-source.zip source
+      - name: Apply Diyse v0.08 Card loadout interaction pass
+        run: python ci/patch-v008.py
 
-      - name: Upload reconstructed v0.07 source
+      - name: Package reconstructed v0.08 source
+        run: zip -qr Diyse-v0.08-runtime-source.zip source
+
+      - name: Upload reconstructed v0.08 source
         uses: actions/upload-artifact@v4
         with:
-          name: Diyse-v0.07-Runtime-Source
-          path: Diyse-v0.07-runtime-source.zip
+          name: Diyse-v0.08-Runtime-Source
+          path: Diyse-v0.08-runtime-source.zip
           if-no-files-found: error
           retention-days: 7
 
-      - name: Run MP, Card foundation, save migration, combat, orientation, presentation, field, progression, menu, inventory, and version tests
+      - name: Run Card loadout interaction, battle slot selection, MP, save migration, combat, orientation, presentation, field, progression, menu, inventory, and version tests
         working-directory: source
         run: gradle --no-daemon --stacktrace :core:test
 
@@ -165,7 +168,7 @@ jobs:
         if: steps.build_apk.outcome == 'failure'
         uses: actions/upload-artifact@v4
         with:
-          name: Diyse-v0.07-Android-Build-Diagnostic
+          name: Diyse-v0.08-Android-Build-Diagnostic
           path: android-build-compact.log
           if-no-files-found: error
           retention-days: 7
@@ -178,7 +181,7 @@ jobs:
         if: steps.build_apk.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
-          name: Diyse-Prototype-v0.07-APK
+          name: Diyse-Prototype-v0.08-APK
           path: |
             source/android/build/outputs/apk/debug/android-debug.apk
             apk-signature.txt
