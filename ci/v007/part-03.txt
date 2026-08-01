@@ -1,0 +1,107 @@
+ }
+''')
+t = t.replace('''        selectedActions.add(BattleAction.party(actorIndex, targetIndex, command, tier, actor.speed, selectedActions.size));
+''', '''        BattleAction action = BattleAction.party(actorIndex, targetIndex, command, tier, actor.speed, selectedActions.size);
+        if (command.equals("Card")) action.cardSlot = pendingCardSlot;
+        selectedActions.add(action);
+''')
+t = t.replace('        pendingActor = -1;\n', '        pendingActor = -1;\n        pendingCardSlot = -1;\n', 1)  # clearPendingTarget occurrence after fields? careful first occurrence after field maybe duplicate
+# Repair accidental field insertion if needed.
+t = t.replace('    private int pendingActor = -1;\n        pendingCardSlot = -1;\n    private int pendingCardSlot = -1;\n', '    private int pendingActor = -1;\n    private int pendingCardSlot = -1;\n')
+# Ensure clearPendingTarget resets slot.
+old_clear = '''    private void clearPendingTarget() {
+        targetMode = TargetMode.NONE;
+        pendingCommand = "";
+        pendingActor = -1;
+    }
+'''
+new_clear = '''    private void clearPendingTarget() {
+        targetMode = TargetMode.NONE;
+        pendingCommand = "";
+        pendingActor = -1;
+        pendingCardSlot = -1;
+    }
+'''
+if old_clear in t: t = t.replace(old_clear, new_clear, 1)
+t = t.replace('if (command.equals("Card")) return "Prototype Card Test";', '''if (command.equals("Card")) {
+            CardDefinition card = equippedStandardCard(actor);
+            return card == null ? "Card" : card.name + " [TEST ONLY]";
+        }''')
+t = t.replace('        actor.resource -= actor.ability.cost;\n', '        actor.mp -= actor.ability.cost;\n')
+old_resolve_card = '''            case "Card" -> {
+                int targetIndex = validLivingEnemyTarget(action.targetIndex);
+                if (targetIndex < 0) return;
+                action.targetIndex = targetIndex;
+                EnemyState target = enemies.get(targetIndex);
+                int damage = magicDamage(actor.magic, 20, target.resistance, target.defending);
+                target.hp = Math.max(0, target.hp - damage);
+                cardUsed[action.actorIndex] = true;
+                appendLog(actor.name + " activates the temporary prototype Card against " + target.name + " for " + damage + " damage.");
+            }
+'''
+new_resolve_card = '''            case "Card" -> {
+                int targetIndex = validLivingEnemyTarget(action.targetIndex);
+                if (targetIndex < 0) return;
+                CardDefinition card = cardAt(actor, action.cardSlot);
+                if (card == null || !cardBattleState.consume(action.actorIndex, action.cardSlot)) {
+                    appendLog(actor.name + " has no valid Standard Card use remaining.");
+                    return;
+                }
+                action.targetIndex = targetIndex;
+                EnemyState target = enemies.get(targetIndex);
+                int damage = magicDamage(actor.magic, card.power, target.resistance, target.defending);
+                target.hp = Math.max(0, target.hp - damage);
+                appendLog(actor.name + " activates " + card.name + " [TEST ONLY] against " + target.name + " for " + damage + " damage.");
+            }
+'''
+if old_resolve_card not in t: raise SystemExit('resolve card block missing')
+t = t.replace(old_resolve_card, new_resolve_card, 1)
+t = t.replace('member.resource + "/" + member.maxResource', 'member.mp + "/" + member.maxMp')
+# Card button state after ability text.
+old_button = '''        if (currentSelector >= 0 && commandButtons.size > 1) {
+            CharacterState actor = party.get(currentSelector);
+            commandButtons.get(1).setText("Ability\\n" + actor.ability.cost + " MP");
+        } else if (commandButtons.size > 1) {
+            commandButtons.get(1).setText("Ability");
+        }
+'''
+new_button = '''        if (currentSelector >= 0 && commandButtons.size > 1) {
+            CharacterState actor = party.get(currentSelector);
+            commandButtons.get(1).setText("Ability\\n" + actor.ability.cost + " MP");
+            int cardSlot = cardBattleState.firstUsableStandardSlot(currentSelector);
+            commandButtons.get(2).setText(cardSlot < 0 ? "Card\\nNo uses" : "Card\\n" + cardBattleState.remaining(currentSelector, cardSlot) + " use");
+        } else if (commandButtons.size > 1) {
+            commandButtons.get(1).setText("Ability");
+            commandButtons.get(2).setText("Card");
+        }
+'''
+if old_button not in t: raise SystemExit('button block missing')
+t = t.replace(old_button, new_button, 1)
+# Insert helpers before selectedItemCount.
+marker = '    private int selectedItemCount() {\n'
+helpers = '''    private CardDefinition equippedStandardCard(CharacterState actor) {
+        for (int slot = 0; slot < com.dj.diyse.model.CardLoadout.STANDARD_SLOT_COUNT; slot++) {
+            CardDefinition card = cardAt(actor, slot);
+            if (card != null) return card;
+        }
+        return null;
+    }
+
+    private CardDefinition cardAt(CharacterState actor, int slot) {
+        if (slot < 0 || slot >= com.dj.diyse.model.CardLoadout.STANDARD_SLOT_COUNT) return null;
+        return PrototypeData.cardById(actor.cardLoadout.standardCardId(slot));
+    }
+
+'''
+if marker not in t: raise SystemExit('selectedItem marker missing')
+t = t.replace(marker, helpers + marker, 1)
+p.write_text(t)
+
+# Update docs/readme metadata and explicit canon boundaries.
+(root / 'docs/CHANGELOG_v0.07.md').write_text('''# Diyse Prototype v0.07 — MP and Card Foundation Pass
+
+- Replaces the retired generic `resource`/`maxResource` character fields with MP-only `mp`/`maxMp` fields.
+- Migrates schema-3 saves from legacy resource keys into schema-4 MP keys without deleting progress.
+- Ordinary Abilities remain repeatable whenever the user has enough MP; no ordinary cooldown or once-per-battle restriction is introduced.
+- Adds two Standard Card slots and one personal Prime Card slot to every prototype character.
+- Adds persistent Card 
