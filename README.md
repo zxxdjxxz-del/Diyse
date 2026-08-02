@@ -4,15 +4,17 @@ Diyse is a Java/libGDX Android prototype for an original cinematic 3D JRPG using
 
 ## Current prototype line
 
-- **Device-tested stable traversal baseline:** v0.09A1
-- **Current device-test candidate:** v0.09B full gatehouse traversal route
+- **Device-tested stable baseline:** v0.09C authored gatehouse visual production slice
+- **Current development candidate:** none
 - **Package:** `com.dj.diyse`
 - **Orientation:** landscape
 - **Minimum Android API:** 23
 - **Build target:** Android API 35
 - **Signing:** permanent prototype certificate supporting install-over updates
 
-The current prototype line preserves title and save flow, exploration, battle, Items, MP Abilities, Standard Card loadout interaction, progression, and signed Android builds while developing the map-and-traversal foundation.
+The current prototype line preserves title and save flow, exploration, battle, Items, MP Abilities, Standard Card loadout interaction, progression, and signed Android builds while developing the map, traversal, and authored visual-production foundation.
+
+v0.09C preserves the accepted seven-zone v0.09B route while replacing the stair court, lower arch passage, and upper bridge calibration plates with deterministic external background, atmosphere, foreground, bridge-state, and Cyanis field assets.
 
 All placeholder artwork, statistics, formulas, abilities, encounters, and temporary prototype locations remain non-canon unless separately approved and consolidated into the newest Diyse Active Master Canon.
 
@@ -23,6 +25,7 @@ Start with:
 - [`docs/REFERENCE_INDEX.md`](docs/REFERENCE_INDEX.md) — authority order and repository reference routing.
 - [`docs/Diyse_Final_Fantasy_VII_X_Map_and_Traversal_Design_Standard.md`](docs/Diyse_Final_Fantasy_VII_X_Map_and_Traversal_Design_Standard.md) — authoritative map and traversal standard consolidating approved lessons from Final Fantasy VII, VIII, IX, and X.
 - [`docs/templates/Diyse_Map_Design_Sheet.md`](docs/templates/Diyse_Map_Design_Sheet.md) — required design and traceability template for future fields, settlements, dungeons, regional routes, vehicles, optional areas, revisits, and final regions.
+- [`docs/maps/v0.09C_Authored_Gatehouse_Visual_Slice_Design_Sheet.md`](docs/maps/v0.09C_Authored_Gatehouse_Visual_Slice_Design_Sheet.md) — traced design and acceptance contract for the accepted authored visual slice.
 
 The older `docs/Diyse_FFVII_Map_and_Traversal_Design_Standard.md` is superseded and redirects to the combined VII–X reference.
 
@@ -31,7 +34,8 @@ The older `docs/Diyse_FFVII_Map_and_Traversal_Design_Standard.md` is superseded 
 Local cinematic areas use a hybrid field model:
 
 - pre-rendered or pre-composed background plates;
-- real-time Cyanis;
+- separate atmosphere and foreground-mask layers;
+- real-time Cyanis using an authored field sheet;
 - authored walkable surfaces and elevations;
 - fixed or semi-fixed cameras;
 - camera-relative analog movement;
@@ -51,7 +55,10 @@ Regional and world travel remain a distinct real-time 3D mode with stable camera
 - Landscape Android application
 - Touch movement and interaction controls
 - Cyanis-only normal field presentation
+- Seven-composition gatehouse traversal route
 - Layered fixed-camera exploration
+- Dynamic bridge connectivity and return shortcut
+- Ruin-pulse timing corridor with safe pockets
 - Classic discrete rounds
 - Commands selected for every conscious active party member before resolution
 - Enemy commands locked from the legitimate beginning-of-round state
@@ -74,10 +81,11 @@ Regional and world travel remain a distinct real-time 3D mode with stable camera
 - Gradle 8.9
 - compileSdk/targetSdk 35
 - minSdk 23
+- Pillow 12.2.0 and NumPy 2.3.5 for deterministic offline visual generation
 
 ## Automatic APK build
 
-The repository workflow reconstructs the verified runtime source, applies the incremental prototype overlays, runs regression and feature tests, compiles the Android APK, verifies the permanent prototype certificate, and uploads the installable artifact.
+The repository workflow reconstructs the verified runtime source, applies the incremental prototype overlays, regenerates and verifies authored visual assets, runs regression and feature tests, compiles the Android APK, verifies the permanent prototype certificate, and uploads the installable artifact.
 
 To retrieve a build on a phone:
 
@@ -93,8 +101,8 @@ Android may require permission for the browser or file manager to install unknow
 
 A draft build does not replace the stable baseline until:
 
-1. integrity, feature, and regression tests pass;
+1. integrity, visual-asset, feature, and regression tests pass;
 2. the APK compiles and retains the permanent certificate;
 3. the complete target route works on the user’s Android phone;
-4. touch feel, camera continuity, readability, occlusion, and performance are accepted;
+4. touch feel, camera continuity, floor alignment, readability, occlusion, bridge-state presentation, and performance are accepted;
 5. the implementation pull request is approved and merged.

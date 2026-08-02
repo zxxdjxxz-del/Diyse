@@ -41,6 +41,9 @@ jobs:
       - name: Install Android packages
         run: sdkmanager "platforms;android-35" "build-tools;35.0.0" "platform-tools"
 
+      - name: Install deterministic visual-render dependencies
+        run: python -m pip install --disable-pip-version-check pillow==12.2.0 numpy==2.3.5
+
       - name: Reconstruct source archive
         run: |
           cat source_parts/source.part.* > Diyse_Source.zip
@@ -121,18 +124,21 @@ jobs:
       - name: Apply Diyse v0.09B full gatehouse traversal route
         run: python ci/patch-v009b.py
 
-      - name: Package reconstructed v0.09B source
-        run: zip -qr Diyse-v0.09B-runtime-source.zip source
+      - name: Apply Diyse v0.09C authored gatehouse visual slice
+        run: python ci/patch-v009c.py
 
-      - name: Upload reconstructed v0.09B source
+      - name: Package reconstructed v0.09C source
+        run: zip -qr Diyse-v0.09C-runtime-source.zip source
+
+      - name: Upload reconstructed v0.09C source
         uses: actions/upload-artifact@v4
         with:
-          name: Diyse-v0.09B-Runtime-Source
-          path: Diyse-v0.09B-runtime-source.zip
+          name: Diyse-v0.09C-Runtime-Source
+          path: Diyse-v0.09C-runtime-source.zip
           if-no-files-found: error
           retention-days: 7
 
-      - name: Run gatehouse traversal, calibration regression, Card, battle, MP, save, presentation, field, progression, menu, inventory, and version tests
+      - name: Run authored-asset contracts, gatehouse traversal, calibration regression, Card, battle, MP, save, presentation, field, progression, menu, inventory, and version tests
         working-directory: source
         run: gradle --no-daemon --stacktrace :core:test
 
@@ -150,7 +156,7 @@ jobs:
       - name: Upload installable APK
         uses: actions/upload-artifact@v4
         with:
-          name: Diyse-Prototype-v0.09B-APK
+          name: Diyse-Prototype-v0.09C-APK
           path: |
             source/android/build/outputs/apk/debug/android-debug.apk
             apk-signature.txt
