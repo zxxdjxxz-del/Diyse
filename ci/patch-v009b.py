@@ -9,9 +9,27 @@ parts = sorted((Path("ci") / "v009b").glob("part-*.txt"))
 if len(parts) != 7:
     raise SystemExit(f"Expected 7 Diyse v0.09B payload parts, found {len(parts)}")
 
-payload_text = "".join(part.read_text().strip() for part in parts)
-if hashlib.sha256(payload_text.encode()).hexdigest() != "b2497bea3b847cba99b277fd9867cf8d11a78d8b20411bfb3f5afe1a88deec5a":
-    raise SystemExit("v0.09B payload Base64 text checksum mismatch")
+expected_part_hashes = {
+    "part-01.txt": "b2bdc4018fa1e8660522bc23358c63acd8bea165f9c8b05affdd07b061f805c7",
+    "part-02.txt": "985e452d18e66f5108806ac9f561eb05ad634fd8df6827b06045f0f4421bb40c",
+    "part-03.txt": "ff9a741f5c2f82defc1a53cd9c333ad6905825a1e0dc95e678dadf9c054f6434",
+    "part-04.txt": "4a194bfaa61cba19d54a9b872709c4a5d0c185b667f8006c9d406e41e7a7708a",
+    "part-05.txt": "e0b6512181237c714e596aec80b9f43d4781bead65535ab05d564e9c81dc4303",
+    "part-06.txt": "44540c37811a1293ada3912a155491ee88317850f571861aef96629267685194",
+    "part-07.txt": "fbf40e5994fd1fa477141e4a1cfaff5d1faf9f93a990e6b297cc7d297089d923",
+}
+payload_chunks = []
+for part in parts:
+    chunk = part.read_text().strip()
+    actual_part_hash = hashlib.sha256(chunk.encode()).hexdigest()
+    expected_part_hash = expected_part_hashes[part.name]
+    if actual_part_hash != expected_part_hash:
+        raise SystemExit(f"v0.09B {part.name} checksum mismatch: {actual_part_hash}")
+    payload_chunks.append(chunk)
+payload_text = "".join(payload_chunks)
+actual_text_hash = hashlib.sha256(payload_text.encode()).hexdigest()
+if actual_text_hash != "b2497bea3b847cba99b277fd9867cf8d11a78d8b20411bfb3f5afe1a88deec5a":
+    raise SystemExit(f"v0.09B payload Base64 text checksum mismatch: {actual_text_hash}")
 try:
     payload = base64.b64decode(payload_text, validate=True)
 except Exception as exception:
