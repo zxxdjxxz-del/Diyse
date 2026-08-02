@@ -77,7 +77,27 @@ Every future map-related issue, implementation branch, and pull request must sta
 
 A map feature is not considered fully accepted solely because automated tests pass. Device testing must confirm touch feel, camera continuity, route readability, occlusion, performance, and complete route accessibility.
 
-## 5. Prototype Baseline Rule
+## 5. Automated Enforcement
+
+The repository enforces this rule through:
+
+- `.github/ISSUE_TEMPLATE/map-and-traversal.yml` for new map and traversal work;
+- `.github/pull_request_template.md` for canon status, design-sheet path, standard sections, tested requirements, deferred work, and device acceptance;
+- `ci/validate-map-traceability.py` for diff-aware pull-request validation;
+- the **Validate map and traversal traceability** step in the Android build workflow.
+
+When a pull request changes field, walkmesh, traversal, gatehouse, world-map, regional, settlement, dungeon, v0.09 traversal overlay, map-standard, or location-sheet files, CI requires:
+
+- a real completed design sheet under `docs/maps/`;
+- a PR body naming that sheet;
+- exact VII–X standard sections or binding requirements;
+- canon or placeholder status;
+- automated and Android device-acceptance coverage;
+- deferred-work disclosure.
+
+Non-map work is not required to provide a map sheet merely because it shares the same Android build workflow.
+
+## 6. Prototype Baseline Rule
 
 The newest device-tested stable prototype is the implementation baseline for subsequent work. A newer draft build does not replace that baseline until:
 
@@ -86,7 +106,7 @@ The newest device-tested stable prototype is the implementation baseline for sub
 - the full target route works on the user’s phone;
 - the relevant pull request is approved and merged.
 
-## 6. Authority Order
+## 7. Authority Order
 
 When documents appear to conflict, use this order:
 
