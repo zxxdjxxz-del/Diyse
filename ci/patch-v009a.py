@@ -9,9 +9,9 @@ import sys
 import zipfile
 
 root = Path("source")
-parts = sorted((Path("ci") / "v009a").glob("part-*.txt"))
-if len(parts) != 4:
-    raise SystemExit(f"Expected 4 Diyse v0.09A payload parts, found {len(parts)}")
+parts = sorted((Path("ci") / "v009a-safe").glob("safe-*.txt"))
+if len(parts) != 16:
+    raise SystemExit(f"Expected 16 Diyse v0.09A safe payload parts, found {len(parts)}")
 
 payload_text = "".join(part.read_text().strip() for part in parts)
 try:
