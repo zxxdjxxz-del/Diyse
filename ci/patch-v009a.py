@@ -69,11 +69,25 @@ for marker in ("versionCode 13", "versionName '0.09A'", "diyse-prototype.keystor
     if marker not in android_gradle:
         raise SystemExit(f"v0.09A Android verification failed for {marker}")
 
-hotfix_payload = (Path("ci") / "v009a1" / "patch.zlib.b64").read_text()
+hotfix_parts = sorted((Path("ci") / "v009a1").glob("part-*.txt"))
+if len(hotfix_parts) != 8:
+    raise SystemExit(f"Expected 8 Diyse v0.09A1 hotfix parts, found {len(hotfix_parts)}")
+hotfix_text = "".join(part.read_text().strip() for part in hotfix_parts)
+if hashlib.sha256(hotfix_text.encode()).hexdigest() != "0d7f60a1d841226ec803f4ee3bde7cb3c737e99159006e12dcc68bfb43faec7d":
+    raise SystemExit("v0.09A1 hotfix Base64 text checksum mismatch")
 try:
-    hotfix_code = zlib.decompress(base64.b64decode(hotfix_payload, validate=True)).decode("utf-8")
+    hotfix_compressed = base64.b64decode(hotfix_text, validate=True)
 except Exception as exception:
-    raise SystemExit(f"v0.09A1 hotfix payload validation failed: {exception}")
+    raise SystemExit(f"v0.09A1 hotfix Base64 validation failed: {exception}")
+if hashlib.sha256(hotfix_compressed).hexdigest() != "eeb34e8a101d0e9a2c43119084a90b33385256e4610744346757301d377bb4c2":
+    raise SystemExit("v0.09A1 hotfix compressed checksum mismatch")
+try:
+    hotfix_bytes = zlib.decompress(hotfix_compressed)
+except Exception as exception:
+    raise SystemExit(f"v0.09A1 hotfix decompression failed: {exception}")
+if hashlib.sha256(hotfix_bytes).hexdigest() != "a80e27e080d8bd5c2be671c282a26d03498243c534a6bd69e4015f65d4a35dd4":
+    raise SystemExit("v0.09A1 hotfix script checksum mismatch")
+hotfix_code = hotfix_bytes.decode("utf-8")
 exec(compile(hotfix_code, "ci/patch-v009a1.py", "exec"))
 
 version = (root / "core/src/main/java/com/dj/diyse/DiyseGame.java").read_text()
