@@ -1,0 +1,113 @@
+name: Map and traversal work
+description: Plan a field, settlement, dungeon, regional route, vehicle space, revisit, or traversal-system change.
+title: "[Map] "
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use the newest Diyse Active Master Canon, `docs/REFERENCE_INDEX.md`, and `docs/Diyse_Final_Fantasy_VII_X_Map_and_Traversal_Design_Standard.md`.
+
+        Substantial map work requires a completed sheet copied from `docs/templates/Diyse_Map_Design_Sheet.md`.
+
+  - type: input
+    id: map_sheet
+    attributes:
+      label: Map design sheet
+      description: Repository path for the completed location-specific design sheet.
+      placeholder: docs/maps/Location_Name_Design_Sheet.md
+    validations:
+      required: true
+
+  - type: dropdown
+    id: map_type
+    attributes:
+      label: Map type
+      options:
+        - Local field
+        - Settlement
+        - Dungeon or facility
+        - Regional route
+        - World-map area
+        - Vehicle or moving-operation space
+        - Optional area
+        - Revisit or destruction state
+        - Final region
+        - Traversal-system foundation
+    validations:
+      required: true
+
+  - type: dropdown
+    id: canon_status
+    attributes:
+      label: Canon status
+      options:
+        - Technical placeholder
+        - Provisional design
+        - Approved canon implementation
+        - Mixed — explain below
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope and player-facing goal
+      description: State exactly what this work changes and what the player should experience.
+    validations:
+      required: true
+
+  - type: textarea
+    id: identity
+    attributes:
+      label: Location identity
+      description: Summarize culture, biome, function, history, emotion, landmark, traversal identity, and the three visible time layers.
+    validations:
+      required: true
+
+  - type: textarea
+    id: standard_sections
+    attributes:
+      label: VII–X standard sections
+      description: Name the exact sections and binding requirements this work implements.
+      placeholder: "Sections 39.7, 41, 42, 46, 47..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: route
+    attributes:
+      label: Route graph and state changes
+      description: Describe critical path, side routes, elevations, mechanisms, hazards, shortcuts, revisits, and exits.
+    validations:
+      required: true
+
+  - type: textarea
+    id: tests
+    attributes:
+      label: Required tests
+      description: Include complete-route, camera, elevation, collision, mechanism, hazard, shortcut, save, regression, and Android device checks as applicable.
+    validations:
+      required: true
+
+  - type: textarea
+    id: deferred
+    attributes:
+      label: Deferred elements
+      description: List art, canon, audio, encounter, accessibility, persistence, or other relevant work intentionally postponed.
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: rules
+    attributes:
+      label: Required acknowledgements
+      options:
+        - label: Cyanis remains the normally sole visible controllable field character unless this is an explicitly authored special sequence.
+          required: true
+        - label: This work will not add a permanent follower train.
+          required: true
+        - label: Automated tests will include complete route accessibility rather than testing components only.
+          required: true
+        - label: The resulting APK will remain draft until tested on the target Android phone.
+          required: true
