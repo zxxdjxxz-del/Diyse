@@ -113,78 +113,39 @@ jobs:
       - name: Apply Diyse v0.09A pre-rendered field calibration
         run: python ci/patch-v009a.py
 
-      - name: Package reconstructed v0.09A source
-        run: zip -qr Diyse-v0.09A-runtime-source.zip source
+      - name: Apply Diyse v0.09B full gatehouse traversal route
+        run: python ci/patch-v009b.py
 
-      - name: Upload reconstructed v0.09A source
+      - name: Package reconstructed v0.09B source
+        run: zip -qr Diyse-v0.09B-runtime-source.zip source
+
+      - name: Upload reconstructed v0.09B source
         uses: actions/upload-artifact@v4
         with:
-          name: Diyse-v0.09A-Runtime-Source
-          path: Diyse-v0.09A-runtime-source.zip
+          name: Diyse-v0.09B-Runtime-Source
+          path: Diyse-v0.09B-runtime-source.zip
           if-no-files-found: error
           retention-days: 7
 
-      - name: Run traversal calibration, Card loadout, battle, MP, save, presentation, field, progression, menu, inventory, and version tests
+      - name: Run gatehouse traversal, calibration regression, Card, battle, MP, save, presentation, field, progression, menu, inventory, and version tests
         working-directory: source
         run: gradle --no-daemon --stacktrace :core:test
 
       - name: Build debug APK
-        id: build_apk
-        continue-on-error: true
         working-directory: source
-        shell: bash
-        run: |
-          set -o pipefail
-          gradle --no-daemon --stacktrace :android:assembleDebug 2>&1 | tee ../android-build.log
+        run: gradle --no-daemon --stacktrace :android:assembleDebug
 
       - name: Verify built APK signature and certificate
-        if: steps.build_apk.outcome == 'success'
         run: |
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs \
             source/android/build/outputs/apk/debug/android-debug.apk | tee apk-signature.txt
           grep -i "bf0340d1a6cc6bcbc2654cf05e53ec39602c470dcb1ecc88c61574104099c073" apk-signature.txt
           cp apk-signature.txt prototype-certificate.txt
 
-      - name: Create compact compiler diagnostic
-        if: steps.build_apk.outcome == 'failure'
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-
-          source = Path("android-build.log")
-          text = source.read_text(errors="replace") if source.exists() else "Android build log was not created."
-          lines = text.splitlines()
-          important = []
-          markers = (" error:", "FAILURE:", "What went wrong:", "Execution failed for task", "Caused by:", "A failure occurred while executing")
-          for index, line in enumerate(lines):
-              if any(marker in line for marker in markers):
-                  start = max(0, index - 4)
-                  end = min(len(lines), index + 12)
-                  important.extend(lines[start:end])
-                  important.append("---")
-          if not important:
-              important = lines[-250:]
-          Path("android-build-compact.log").write_text("\n".join(important[-500:]) + "\n")
-          PY
-
-      - name: Upload Android compiler diagnostic
-        if: steps.build_apk.outcome == 'failure'
-        uses: actions/upload-artifact@v4
-        with:
-          name: Diyse-v0.09A-Android-Build-Diagnostic
-          path: android-build-compact.log
-          if-no-files-found: error
-          retention-days: 7
-
-      - name: Stop after Android build failure
-        if: steps.build_apk.outcome == 'failure'
-        run: exit 1
-
       - name: Upload installable APK
-        if: steps.build_apk.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
-          name: Diyse-Prototype-v0.09A-APK
+          name: Diyse-Prototype-v0.09B-APK
           path: |
             source/android/build/outputs/apk/debug/android-debug.apk
             apk-signature.txt
