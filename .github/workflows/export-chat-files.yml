@@ -1,0 +1,27 @@
+name: Export Diyse Chat Files
+
+on:
+  push:
+    branches: [agent/v009d-field-persistence]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Package complete repository branch snapshot
+        run: zip -qr Diyse-Repository-v0.09D-Branch-Snapshot.zip . -x '.git/*'
+
+      - name: Upload repository snapshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: Diyse-Repository-v0.09D-Branch-Snapshot
+          path: Diyse-Repository-v0.09D-Branch-Snapshot.zip
+          if-no-files-found: error
+          retention-days: 7
