@@ -4,8 +4,8 @@ Diyse is a Java/libGDX Android prototype for an original cinematic 3D JRPG using
 
 ## Current prototype line
 
-- **Device-tested stable traversal baseline:** v0.09B
-- **Current device-test candidate:** v0.09C authored gatehouse visual production slice
+- **Device-tested stable baseline:** v0.09C authored gatehouse visual production slice
+- **Current development candidate:** none
 - **Package:** `com.dj.diyse`
 - **Orientation:** landscape
 - **Minimum Android API:** 23
@@ -25,7 +25,7 @@ Start with:
 - [`docs/REFERENCE_INDEX.md`](docs/REFERENCE_INDEX.md) — authority order and repository reference routing.
 - [`docs/Diyse_Final_Fantasy_VII_X_Map_and_Traversal_Design_Standard.md`](docs/Diyse_Final_Fantasy_VII_X_Map_and_Traversal_Design_Standard.md) — authoritative map and traversal standard consolidating approved lessons from Final Fantasy VII, VIII, IX, and X.
 - [`docs/templates/Diyse_Map_Design_Sheet.md`](docs/templates/Diyse_Map_Design_Sheet.md) — required design and traceability template for future fields, settlements, dungeons, regional routes, vehicles, optional areas, revisits, and final regions.
-- [`docs/maps/v0.09C_Authored_Gatehouse_Visual_Slice_Design_Sheet.md`](docs/maps/v0.09C_Authored_Gatehouse_Visual_Slice_Design_Sheet.md) — traced design and acceptance contract for the current authored visual slice.
+- [`docs/maps/v0.09C_Authored_Gatehouse_Visual_Slice_Design_Sheet.md`](docs/maps/v0.09C_Authored_Gatehouse_Visual_Slice_Design_Sheet.md) — traced design and acceptance contract for the accepted authored visual slice.
 
 The older `docs/Diyse_FFVII_Map_and_Traversal_Design_Standard.md` is superseded and redirects to the combined VII–X reference.
 
