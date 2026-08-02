@@ -5,15 +5,23 @@ import io
 import zipfile
 
 root = Path("source")
-parts = sorted((Path("ci") / "v009b").glob("part-*.txt"))
-if len(parts) != 7:
-    raise SystemExit(f"Expected 7 Diyse v0.09B payload parts, found {len(parts)}")
+part_names = [
+    "part-01.txt", "part-02.txt", "part-03.txt",
+    "part-04a.txt", "part-04b.txt", "part-04c.txt",
+    "part-05.txt", "part-06.txt", "part-07.txt",
+]
+parts = [Path("ci") / "v009b" / name for name in part_names]
+for part in parts:
+    if not part.is_file():
+        raise SystemExit(f"Missing Diyse v0.09B payload part: {part.name}")
 
 expected_part_hashes = {
     "part-01.txt": "b2bdc4018fa1e8660522bc23358c63acd8bea165f9c8b05affdd07b061f805c7",
     "part-02.txt": "985e452d18e66f5108806ac9f561eb05ad634fd8df6827b06045f0f4421bb40c",
     "part-03.txt": "ff9a741f5c2f82defc1a53cd9c333ad6905825a1e0dc95e678dadf9c054f6434",
-    "part-04.txt": "4a194bfaa61cba19d54a9b872709c4a5d0c185b667f8006c9d406e41e7a7708a",
+    "part-04a.txt": "8b324916d064c7218c2d80b332e2d9db5fe5edefb84a11095a434adf6634f98c",
+    "part-04b.txt": "b7671a9aef68494882cf5423df6c1c3aa650d6442e2daceb9b0bf148ed61dc9b",
+    "part-04c.txt": "c316ce40d4f06d3d5e9715d7a564c48c9533901bb0937af680addf1af5fe895a",
     "part-05.txt": "e0b6512181237c714e596aec80b9f43d4781bead65535ab05d564e9c81dc4303",
     "part-06.txt": "44540c37811a1293ada3912a155491ee88317850f571861aef96629267685194",
     "part-07.txt": "fbf40e5994fd1fa477141e4a1cfaff5d1faf9f93a990e6b297cc7d297089d923",
