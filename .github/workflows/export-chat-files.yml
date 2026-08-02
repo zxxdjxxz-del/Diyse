@@ -3,6 +3,8 @@ name: Export Diyse Chat Files
 on:
   push:
     branches: [agent/v009d-field-persistence]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
