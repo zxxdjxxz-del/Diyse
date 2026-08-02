@@ -3,6 +3,7 @@ import base64
 import hashlib
 import io
 import zipfile
+import zlib
 
 root = Path("source")
 parts = sorted((Path("ci") / "v009a").glob("part-*.txt"))
@@ -68,4 +69,30 @@ for marker in ("versionCode 13", "versionName '0.09A'", "diyse-prototype.keystor
     if marker not in android_gradle:
         raise SystemExit(f"v0.09A Android verification failed for {marker}")
 
-print("Applied Diyse Prototype v0.09A pre-rendered field calibration.")
+hotfix_payload = (Path("ci") / "v009a1" / "patch.zlib.b64").read_text()
+try:
+    hotfix_code = zlib.decompress(base64.b64decode(hotfix_payload, validate=True)).decode("utf-8")
+except Exception as exception:
+    raise SystemExit(f"v0.09A1 hotfix payload validation failed: {exception}")
+exec(compile(hotfix_code, "ci/patch-v009a1.py", "exec"))
+
+version = (root / "core/src/main/java/com/dj/diyse/DiyseGame.java").read_text()
+if 'VERSION = "0.09A1"' not in version:
+    raise SystemExit("v0.09A1 version verification failed")
+
+field_engine = (root / "core/src/main/java/com/dj/diyse/field/FieldMapDefinition.java").read_text()
+for marker in ("bestElevationDelta", "candidate.elevationAt", "bestDepthDelta"):
+    if marker not in field_engine:
+        raise SystemExit(f"v0.09A1 elevation-continuity verification failed for {marker}")
+
+route_test = (root / "core/src/test/java/com/dj/diyse/field/TraversalCalibrationMapTest.java").read_text()
+for marker in ("completeCalibrationRouteIsReachableFromSpawn", "underpassToStairPortalIsBroadEnoughForTouchMovement"):
+    if marker not in route_test:
+        raise SystemExit(f"v0.09A1 route test verification failed for {marker}")
+
+android_gradle = (root / "android/build.gradle").read_text()
+for marker in ("versionCode 14", "versionName '0.09A1'", "diyse-prototype.keystore"):
+    if marker not in android_gradle:
+        raise SystemExit(f"v0.09A1 Android verification failed for {marker}")
+
+print("Applied Diyse Prototype v0.09A1 upper-platform accessibility fix.")
