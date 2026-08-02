@@ -1,0 +1,71 @@
+from pathlib import Path
+import base64
+import hashlib
+import io
+import zipfile
+
+root = Path("source")
+parts = sorted((Path("ci") / "v009a").glob("part-*.txt"))
+if len(parts) != 9:
+    raise SystemExit(f"Expected 9 Diyse v0.09A payload parts, found {len(parts)}")
+
+payload_text = "".join(part.read_text().strip() for part in parts)
+try:
+    payload = base64.b64decode(payload_text, validate=True)
+except Exception as exception:
+    raise SystemExit(f"v0.09A payload Base64 validation failed: {exception}")
+
+expected_sha256 = "0c51f3e3a8ef683b9e8934ae7d265198d45ac5a571168ac7aca24bc9b20b5ab6"
+actual_sha256 = hashlib.sha256(payload).hexdigest()
+if actual_sha256 != expected_sha256:
+    raise SystemExit(f"v0.09A payload checksum mismatch: {actual_sha256}")
+
+try:
+    with zipfile.ZipFile(io.BytesIO(payload)) as archive:
+        bad_member = archive.testzip()
+        if bad_member is not None:
+            raise SystemExit(f"v0.09A payload ZIP integrity failed at {bad_member}")
+        archive.extractall(root)
+except zipfile.BadZipFile as exception:
+    raise SystemExit(f"v0.09A payload is not a valid ZIP: {exception}")
+
+required = [
+    "core/src/main/java/com/dj/diyse/screens/TraversalCalibrationScreen.java",
+    "core/src/main/java/com/dj/diyse/field/FieldMapDefinition.java",
+    "core/src/main/java/com/dj/diyse/field/TraversalCalibrationMap.java",
+    "core/src/main/java/com/dj/diyse/ui/TraversalCalibrationArt.java",
+    "core/src/test/java/com/dj/diyse/field/TraversalCalibrationMapTest.java",
+    "docs/CHANGELOG_v0.09A.md",
+]
+for relative in required:
+    if not (root / relative).is_file():
+        raise SystemExit(f"v0.09A patch did not create {relative}")
+
+version = (root / "core/src/main/java/com/dj/diyse/DiyseGame.java").read_text()
+for marker in ('VERSION = "0.09A"', "TraversalCalibrationScreen"):
+    if marker not in version:
+        raise SystemExit(f"v0.09A game verification failed for {marker}")
+
+game_state = (root / "core/src/main/java/com/dj/diyse/model/GameState.java").read_text()
+for marker in ("SAVE_SCHEMA_VERSION = 4", 'putString("save_build", "0.09A")'):
+    if marker not in game_state:
+        raise SystemExit(f"v0.09A GameState verification failed for {marker}")
+
+screen = (root / "core/src/main/java/com/dj/diyse/screens/TraversalCalibrationScreen.java").read_text()
+for marker in ("Touchpad", "beginCameraBasisBlend", "archAlpha", "new CourtyardScreen"):
+    if marker not in screen:
+        raise SystemExit(f"v0.09A traversal screen verification failed for {marker}")
+
+field_map = (root / "core/src/main/java/com/dj/diyse/field/TraversalCalibrationMap.java").read_text()
+for marker in ("UPPER_BRIDGE", "UNDERPASS", ".connect(UPPER_RETURN, UPPER_BRIDGE)"):
+    if marker not in field_map:
+        raise SystemExit(f"v0.09A calibration map verification failed for {marker}")
+if ".connect(UNDERPASS, UPPER_BRIDGE)" in field_map or ".connect(UPPER_BRIDGE, UNDERPASS)" in field_map:
+    raise SystemExit("v0.09A incorrectly connected the overlapping tunnel and bridge")
+
+android_gradle = (root / "android/build.gradle").read_text()
+for marker in ("versionCode 13", "versionName '0.09A'", "diyse-prototype.keystore"):
+    if marker not in android_gradle:
+        raise SystemExit(f"v0.09A Android verification failed for {marker}")
+
+print("Applied Diyse Prototype v0.09A pre-rendered field calibration.")
