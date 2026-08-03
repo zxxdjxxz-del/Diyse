@@ -38,10 +38,6 @@ def main() -> None:
 
     ruin = read(ruin_path)
 
-    # Godot screen input uses negative Y for up. The previous camera-relative
-    # conversion multiplied that value by camera-forward, reversing vertical
-    # movement. Subtracting the Y component restores intuitive up/down motion
-    # for touch, keyboard, and controller input.
     ruin = replace_once(
         ruin,
         r"(?m)^(\s*)var direction := \(right \* input_vector\.x \+ forward \* input_vector\.y\)\s*$",
@@ -49,8 +45,6 @@ def main() -> None:
         "camera-relative movement line",
     )
 
-    # Keep the distance encounter system, but also guarantee the authored first
-    # formation when Cyanis crosses the post-bridge atrium gate.
     encounter_line = re.search(r"(?m)^    var can_encounter := .+$", ruin)
     if encounter_line is None:
         fail("could not locate can_encounter definition")
@@ -76,13 +70,13 @@ def main() -> None:
     identity = replace_once(
         identity,
         r'(?m)^const BUILD_VERSION := "[^"]+"$',
-        'const BUILD_VERSION := "0.02.2"',
+        'const BUILD_VERSION := "0.02.3"',
         "build version",
     )
     identity = replace_once(
         identity,
         r'(?m)^const CONTENT_VERSION := "[^"]+"$',
-        'const CONTENT_VERSION := "vs-0.02.2"',
+        'const CONTENT_VERSION := "vs-0.02.3"',
         "content version",
     )
     write(identity_path, identity)
@@ -91,18 +85,18 @@ def main() -> None:
     presets = replace_once(
         presets,
         r"(?m)^version/code=\d+$",
-        "version/code=4",
+        "version/code=5",
         "Android version code",
     )
     presets = replace_once(
         presets,
         r'(?m)^version/name="[^"]+"$',
-        'version/name="0.02.2"',
+        'version/name="0.02.3"',
         "Android version name",
     )
     write(preset_path, presets)
 
-    print("PASS: v0.02.2 QA fixes applied (vertical movement, guaranteed first battle, build identity).")
+    print("PASS: v0.02.3 QA fixes applied (movement, authored encounter, battle runtime repair identity).")
 
 
 if __name__ == "__main__":
