@@ -1,0 +1,95 @@
+    _record_plan(str(pending_action["action_id"]), str(pending_action["family"]), target_id)
+
+func _target_policy(action_id: String) -> String:
+    if action_id in ["RESOLUTE_COUNTER", "WATCHFUL_AIM", "STEADFAST_CHALLENGE", "OATH_COUNTER", "REWOVEN", "PREPARED_THREAD", "WARDENS_VALOR"]:
+        return "SELF"
+    if action_id in ["MEND", "GUARDIAN_SIGIL", "CLEAR_WARDING", "GUARDED_OATH", "WEAVE_GUARD"]:
+        return "ALLY"
+    if action_id in ["HARMONIZING_WARD", "RENEWAL"]:
+        return "SELF"
+    return "ENEMY"
+
+func _record_plan(action_id: String, family: String, target_id: String) -> void:
+    plans.append({
+        "actor_id": _current_actor(),
+        "action_id": action_id,
+        "target_id": target_id,
+        "family": family,
+        "priority": 0,
+        "tie_rank": current_party_index,
+    })
+    current_party_index += 1
+    pending_action.clear()
+    _refresh_all()
+    _show_commands()
+
+func _confirm_round() -> void:
+    if plans.size() != planning_ids.size():
+        return
+    phase = "RESOLUTION"
+    confirm_button.visible = false
+    _clear(command_box)
+    _clear(detail_box)
+    _refresh_all()
+    var events := sim.resolve_round(plans)
+    for event in events:
+        _append_event(event)
+        _refresh_actor_panels()
+        await get_tree().create_timer(0.12 if not bool(GameState.settings.get("reduced_motion", false)) else 0.03).timeout
+    var result := sim.outcome()
+    if result == "VICTORY":
+        await _victory()
+        return
+    if result == "DEFEAT":
+        _show_defeat()
+        return
+    plans.clear()
+    current_party_index = 0
+    planning_ids = sim.living_party()
+    phase = "PLANNING"
+    for event in sim.start_round():
+        _append_event(event)
+    _refresh_all()
+    _show_commands()
+
+func _append_event(event: Dictionary) -> void:
+    log_label.append_text(str(event.get("text", "")) + "\n")
+    if event.has("follow_up"):
+        log_label.append_text(str(event["follow_up"]) + "\n")
+    log_label.scroll_to_line(maxi(0, log_label.get_line_count() - 1))
+
+func _victory() -> void:
+    phase = "VICTORY"
+    _refresh_all()
+    log_label.append_text("[b]Victory.[/b]\n")
+    GameState.battle_records["battles_won"] = int(GameState.battle_records.get("battles_won", 0)) + 1
+    if BattleContext.battle_kind == "BOSS":
+        GameState.set_flag(GameState.FLAG_VS_BOSS_CLEARED, true)
+        GameState.set_flag(GameState.FLAG_VS_SLICE_COMPLETE, true)
+        SaveManager.save_game("boss_victory")
+        await get_tree().create_timer(1.0).timeout
+        SceneRouter.goto_scene("res://src/scenes/results_scene.tscn")
+    else:
+        GameState.set_flag(GameState.FLAG_VS_FIRST_BATTLE_CLEARED, true)
+        GameState.set_world_position(BattleContext.return_position, BattleContext.return_facing)
+        SaveManager.save_game("ordinary_victory")
+        await get_tree().create_timer(0.8).timeout
+        SceneRouter.goto_scene(BattleContext.return_scene)
+
+func _show_defeat() -> void:
+    phase = "DEFEAT"
+    _refresh_all()
+    _clear(command_box)
+    _clear(detail_box)
+    var retry := _detail_button("RETRY BATTLE")
+    retry.pressed.connect(_start_battle)
+    detail_box.add_child(retry)
+    var title := _detail_button("RETURN TO TITLE")
+    title.pressed.connect(func(): SceneRouter.goto_scene("res://src/scenes/title.tscn"))
+    detail_box.add_child(title)
+
+func _current_actor() -> String:
+    return planning_ids[current_party_index]
+
+func _clear(parent: Node) -> void:
+    for child in parent.get_children():
