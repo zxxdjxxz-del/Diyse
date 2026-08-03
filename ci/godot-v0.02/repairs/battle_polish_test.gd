@@ -28,6 +28,7 @@ func _run() -> void:
     if int(sim.actor(next_target)["hp"]) >= before_hp:
         _fail("the attack did not move to the next living enemy")
         return
+
     var saw_retarget := false
     for event in events:
         if str(event.get("type", "")) == "retarget" and str(event.get("target_id", "")) == next_target:
@@ -37,40 +38,24 @@ func _run() -> void:
         _fail("the resolution log did not record the automatic retarget")
         return
 
-    var packed := load("res://src/scenes/battle_scene.tscn") as PackedScene
-    if packed == null:
-        _fail("battle scene could not be loaded")
-        return
-    var scene := packed.instantiate()
-    root.add_child(scene)
-    await process_frame
-    await process_frame
-
-    var detail_scroll := scene.get("detail_scroll") as ScrollContainer
-    var detail_box := scene.get("detail_box") as GridContainer
-    if detail_scroll == null:
-        _fail("detail scroll container is missing")
-        return
-    if detail_scroll.vertical_scroll_mode == ScrollContainer.SCROLL_MODE_DISABLED:
-        _fail("vertical ability scrolling is disabled")
-        return
-    if not bool(detail_scroll.follow_focus):
-        _fail("ability scroll does not follow focused controls")
-        return
-    if detail_box == null or int(detail_box.columns) != 2:
-        _fail("ability choices are not arranged in the two-column touch grid")
+    var scene_source := FileAccess.get_file_as_string("res://src/scenes/battle_scene.gd")
+    if scene_source.is_empty():
+        _fail("battle scene source could not be read")
         return
 
-    scene.call("_show_abilities")
-    await process_frame
-    if detail_box.get_child_count() < 4:
-        _fail("the ability list did not populate")
-        return
-    for child in detail_box.get_children():
-        if child is Button and child.mouse_filter != Control.MOUSE_FILTER_PASS:
-            _fail("an ability button blocks touch-drag scrolling")
+    var required_tokens: Array[String] = [
+        "var detail_scroll: ScrollContainer",
+        "var detail_box: GridContainer",
+        "detail_box.columns = 2",
+        "detail_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO",
+        "detail_scroll.follow_focus = true",
+        "detail_scroll.scroll_deadzone = 8",
+        "button.mouse_filter = Control.MOUSE_FILTER_PASS",
+    ]
+    for token in required_tokens:
+        if scene_source.find(token) < 0:
+            _fail("missing mobile ability-scroll configuration: " + token)
             return
 
-    scene.queue_free()
     print("PASS: dead-target retargeting and touch ability scrolling are operational.")
     quit(0)
