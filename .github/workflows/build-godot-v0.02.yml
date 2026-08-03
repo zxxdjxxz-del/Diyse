@@ -21,9 +21,9 @@ jobs:
     env:
       GODOT_VERSION: "4.7.1"
       PROJECT_DIR: "The_Role_of_the_Diyse_Godot_Prototype_v0.02"
-      APK_NAME: "The_Role_of_the_Diyse_v0.02.2_QA.apk"
+      APK_NAME: "The_Role_of_the_Diyse_v0.02.3_QA.apk"
       ORIGINAL_PAYLOAD_SHA256: "69c173fd19653ad5f5ccb5012de3ce6382d07ca67b90067c71a7da7c3335f38b"
-      REPAIR_SHA256: "d4ddb887a1876afcd7877a86b617e12ec25435a2479eac2f0ef0c2d75469f78d"
+      REPAIR_SHA256: "ca6cdb5aa2fa65031dd4d41bc53ce2f3a55c7bb1c50b8ca08da3ea23d893c59a"
       BATTLE_SCENE_SHA256: "f9a391784df0bd24afa2e9d0ad1ee5739827e4c6d25a131fc80ebd519c977ea8"
 
     steps:
@@ -103,8 +103,9 @@ jobs:
           grep -Fq 'GRAY-BOX BATTLE STAGE' "${BATTLE}"
           grep -Fq 'CONFIRM ROUND' "${BATTLE}"
           grep -Fq 'ProgressBar.new()' "${BATTLE}"
-          grep -Fqx 'const BUILD_VERSION := "0.02.2"' "${PROJECT_DIR}/src/autoload/build_identity.gd"
-          grep -Fqx 'version/name="0.02.2"' "${PROJECT_DIR}/export_presets.cfg"
+          grep -Fq 'var idx: int = absi' "${PROJECT_DIR}/src/core/battle_simulator.gd"
+          grep -Fqx 'const BUILD_VERSION := "0.02.3"' "${PROJECT_DIR}/src/autoload/build_identity.gd"
+          grep -Fqx 'version/name="0.02.3"' "${PROJECT_DIR}/export_presets.cfg"
 
       - name: Install Godot editor and Android export templates
         shell: bash
@@ -193,7 +194,7 @@ jobs:
       - name: Upload installable Godot APK
         uses: actions/upload-artifact@v4
         with:
-          name: The-Role-of-the-Diyse-Godot-v0.02.2-QA-APK
+          name: The-Role-of-the-Diyse-Godot-v0.02.3-QA-APK
           path: android-artifact/
           if-no-files-found: error
           retention-days: 14
