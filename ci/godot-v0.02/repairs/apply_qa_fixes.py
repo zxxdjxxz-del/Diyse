@@ -70,13 +70,13 @@ def main() -> None:
     identity = replace_once(
         identity,
         r'(?m)^const BUILD_VERSION := "[^"]+"$',
-        'const BUILD_VERSION := "0.02.3"',
+        'const BUILD_VERSION := "0.02.4"',
         "build version",
     )
     identity = replace_once(
         identity,
         r'(?m)^const CONTENT_VERSION := "[^"]+"$',
-        'const CONTENT_VERSION := "vs-0.02.3"',
+        'const CONTENT_VERSION := "vs-0.02.4"',
         "content version",
     )
     write(identity_path, identity)
@@ -85,18 +85,18 @@ def main() -> None:
     presets = replace_once(
         presets,
         r"(?m)^version/code=\d+$",
-        "version/code=5",
+        "version/code=6",
         "Android version code",
     )
     presets = replace_once(
         presets,
         r'(?m)^version/name="[^"]+"$',
-        'version/name="0.02.3"',
+        'version/name="0.02.4"',
         "Android version name",
     )
     write(preset_path, presets)
 
-    print("PASS: v0.02.3 QA fixes applied (movement, authored encounter, battle runtime repair identity).")
+    print("PASS: v0.02.4 QA fixes applied (movement, authored encounter, runtime repair, battle retargeting, and touch scrolling).")
 
 
 if __name__ == "__main__":
