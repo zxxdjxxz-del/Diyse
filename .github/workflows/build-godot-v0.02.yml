@@ -72,12 +72,13 @@ jobs:
           python "${PROJECT_DIR}/tools/validate_project.py"
           python "${PROJECT_DIR}/tests/reference_battle_test.py"
 
-      - name: Apply Godot 4.7 compatibility fixes
+      - name: Apply Godot 4.7 and Android compatibility fixes
         shell: bash
         run: |
           set -euo pipefail
           JOYSTICK="${PROJECT_DIR}/src/ui/virtual_joystick.gd"
           RUIN="${PROJECT_DIR}/src/scenes/ruin_scene.gd"
+          PROJECT_SETTINGS="${PROJECT_DIR}/project.godot"
           grep -qx 'class_name VirtualJoystick' "${JOYSTICK}"
           grep -q 'VirtualJoystick' "${RUIN}"
           sed -i 's/^class_name VirtualJoystick$/class_name DiyseVirtualJoystick/' "${JOYSTICK}"
@@ -85,6 +86,12 @@ jobs:
           grep -qx 'class_name DiyseVirtualJoystick' "${JOYSTICK}"
           grep -q 'DiyseVirtualJoystick' "${RUIN}"
           ! grep -RInw --include='*.gd' 'VirtualJoystick' "${PROJECT_DIR}/src"
+          if grep -q '^textures/vram_compression/import_etc2_astc=' "${PROJECT_SETTINGS}"; then
+            sed -i 's|^textures/vram_compression/import_etc2_astc=.*$|textures/vram_compression/import_etc2_astc=true|' "${PROJECT_SETTINGS}"
+          else
+            sed -i '/^\[rendering\]$/a textures/vram_compression/import_etc2_astc=true' "${PROJECT_SETTINGS}"
+          fi
+          grep -qx 'textures/vram_compression/import_etc2_astc=true' "${PROJECT_SETTINGS}"
 
       - name: Install Godot editor and Android export templates
         shell: bash
