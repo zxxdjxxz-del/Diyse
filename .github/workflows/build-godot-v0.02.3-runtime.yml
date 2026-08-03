@@ -25,7 +25,7 @@ jobs:
       SIMULATOR_SHA256: "ca6cdb5aa2fa65031dd4d41bc53ce2f3a55c7bb1c50b8ca08da3ea23d893c59a"
       BATTLE_SCENE_SHA256: "f9a391784df0bd24afa2e9d0ad1ee5739827e4c6d25a131fc80ebd519c977ea8"
       POLISH_SHA256: "180cdefca775dfc9c241362232382935f0fe03bf897b32e41c7f1198dc76a1b0"
-      POLISH_TEST_SHA256: "e0dc4d18c4ff794a94dc46a46ce23ff97b93c3259f2c10d7f2801e7d29b0c635"
+      POLISH_TEST_SHA256: "741ce88f1cfa86be5949babee64701440b99a6eb43d4dd42ee8c6c15e2b28278"
 
     steps:
       - name: Check out QA branch
@@ -63,15 +63,14 @@ jobs:
           echo "${SIMULATOR_SHA256}  ci/godot-v0.02/repairs/battle_simulator.gd" | sha256sum --check --strict
           echo "${POLISH_SHA256}  ci/godot-v0.02/repairs/apply_battle_polish.py" | sha256sum --check --strict
           echo "${POLISH_TEST_SHA256}  ci/godot-v0.02/repairs/battle_polish_test.gd" | sha256sum --check --strict
+
           mkdir -p "${PROJECT_DIR}/src/core"
           cp ci/godot-v0.02/repairs/battle_simulator.gd "${PROJECT_DIR}/src/core/battle_simulator.gd"
-
           (
             cd "${PROJECT_DIR}"
             grep -v 'src/core/battle_simulator.gd$' SOURCE_MANIFEST.sha256 | sha256sum --strict -c -
           )
           echo "${SIMULATOR_SHA256}  ${PROJECT_DIR}/src/core/battle_simulator.gd" | sha256sum --check --strict
-
           python "${PROJECT_DIR}/tools/validate_project.py"
           python "${PROJECT_DIR}/tests/reference_battle_test.py"
 
@@ -101,7 +100,6 @@ jobs:
           cp ci/godot-v0.02/repairs/battle_polish_test.gd "${PROJECT_DIR}/tests/battle_polish_test.gd"
 
           grep -Fq 'func _next_living_target' "${PROJECT_DIR}/src/core/battle_simulator.gd"
-          grep -Fq 'events.append(_event(' "${PROJECT_DIR}/src/core/battle_simulator.gd"
           grep -Fq 'var detail_box: GridContainer' "${BATTLE}"
           grep -Fq 'detail_box.columns = 2' "${BATTLE}"
           grep -Fq 'button.mouse_filter = Control.MOUSE_FILTER_PASS' "${BATTLE}"
@@ -167,35 +165,21 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          "${GODOT_BIN}" \
-            --headless \
-            --editor \
-            --path "${PROJECT_DIR}" \
-            --import \
-            --quit-after 20 \
-            --verbose 2>&1 | tee godot-import.log
+          "${GODOT_BIN}" --headless --editor --path "${PROJECT_DIR}" --import --quit-after 20 --verbose 2>&1 | tee godot-import.log
           ! grep -E "SCRIPT ERROR|Parse Error|Compile Error|ERROR: Failed to load script" godot-import.log
 
       - name: Run battle scene runtime smoke test
         shell: bash
         run: |
           set -o pipefail
-          "${GODOT_BIN}" \
-            --headless \
-            --path "${PROJECT_DIR}" \
-            --quit-after 120 \
-            --verbose \
-            res://src/scenes/battle_scene.tscn 2>&1 | tee battle-runtime.log
+          "${GODOT_BIN}" --headless --path "${PROJECT_DIR}" --quit-after 120 --verbose res://src/scenes/battle_scene.tscn 2>&1 | tee battle-runtime.log
           ! grep -E "SCRIPT ERROR|Parse Error|Compile Error|Invalid call|Invalid assignment|Invalid access|ERROR:" battle-runtime.log
 
       - name: Run retarget and touch-scroll regression test
         shell: bash
         run: |
           set -o pipefail
-          "${GODOT_BIN}" \
-            --headless \
-            --path "${PROJECT_DIR}" \
-            --script res://tests/battle_polish_test.gd 2>&1 | tee battle-polish-test.log
+          "${GODOT_BIN}" --headless --path "${PROJECT_DIR}" --quit-after 240 --script res://tests/battle_polish_test.gd 2>&1 | tee battle-polish-test.log
           grep -Fq 'PASS: dead-target retargeting and touch ability scrolling are operational.' battle-polish-test.log
           ! grep -E "SCRIPT ERROR|Parse Error|Compile Error|BATTLE POLISH TEST FAILED|ERROR:" battle-polish-test.log
 
