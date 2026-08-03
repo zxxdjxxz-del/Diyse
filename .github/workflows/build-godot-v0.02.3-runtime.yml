@@ -1,4 +1,4 @@
-name: Build Godot v0.02.3 Runtime-Verified APK
+name: Build Godot v0.02.4 Runtime-Verified APK
 
 on:
   pull_request:
@@ -11,7 +11,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: godot-v0.02.3-runtime-${{ github.ref }}
+  group: godot-v0.02.4-runtime-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -21,9 +21,11 @@ jobs:
     env:
       GODOT_VERSION: "4.7.1"
       PROJECT_DIR: "The_Role_of_the_Diyse_Godot_Prototype_v0.02"
-      APK_NAME: "The_Role_of_the_Diyse_v0.02.3_QA.apk"
+      APK_NAME: "The_Role_of_the_Diyse_v0.02.4_QA.apk"
       SIMULATOR_SHA256: "ca6cdb5aa2fa65031dd4d41bc53ce2f3a55c7bb1c50b8ca08da3ea23d893c59a"
       BATTLE_SCENE_SHA256: "f9a391784df0bd24afa2e9d0ad1ee5739827e4c6d25a131fc80ebd519c977ea8"
+      POLISH_SHA256: "180cdefca775dfc9c241362232382935f0fe03bf897b32e41c7f1198dc76a1b0"
+      POLISH_TEST_SHA256: "e0dc4d18c4ff794a94dc46a46ce23ff97b93c3259f2c10d7f2801e7d29b0c635"
 
     steps:
       - name: Check out QA branch
@@ -59,6 +61,8 @@ jobs:
           test -f "${PROJECT_DIR}/project.godot"
 
           echo "${SIMULATOR_SHA256}  ci/godot-v0.02/repairs/battle_simulator.gd" | sha256sum --check --strict
+          echo "${POLISH_SHA256}  ci/godot-v0.02/repairs/apply_battle_polish.py" | sha256sum --check --strict
+          echo "${POLISH_TEST_SHA256}  ci/godot-v0.02/repairs/battle_polish_test.gd" | sha256sum --check --strict
           mkdir -p "${PROJECT_DIR}/src/core"
           cp ci/godot-v0.02/repairs/battle_simulator.gd "${PROJECT_DIR}/src/core/battle_simulator.gd"
 
@@ -71,7 +75,7 @@ jobs:
           python "${PROJECT_DIR}/tools/validate_project.py"
           python "${PROJECT_DIR}/tests/reference_battle_test.py"
 
-      - name: Apply compatibility and QA repairs
+      - name: Apply compatibility and battle-polish repairs
         shell: bash
         run: |
           set -euo pipefail
@@ -93,12 +97,16 @@ jobs:
           python ci/godot-v0.02/repairs/apply_qa_fixes.py "${PROJECT_DIR}"
           cat ci/godot-v0.02/repairs/battle_scene.part.* > "${BATTLE}"
           echo "${BATTLE_SCENE_SHA256}  ${BATTLE}" | sha256sum --check --strict
+          python ci/godot-v0.02/repairs/apply_battle_polish.py "${PROJECT_DIR}"
+          cp ci/godot-v0.02/repairs/battle_polish_test.gd "${PROJECT_DIR}/tests/battle_polish_test.gd"
 
-          grep -Fq 'var idx: int = absi' "${PROJECT_DIR}/src/core/battle_simulator.gd"
-          grep -Fq 'GRAY-BOX BATTLE STAGE' "${BATTLE}"
-          grep -Fq 'CONFIRM ROUND' "${BATTLE}"
-          grep -Fqx 'const BUILD_VERSION := "0.02.3"' "${PROJECT_DIR}/src/autoload/build_identity.gd"
-          grep -Fqx 'version/name="0.02.3"' "${PROJECT_DIR}/export_presets.cfg"
+          grep -Fq 'func _next_living_target' "${PROJECT_DIR}/src/core/battle_simulator.gd"
+          grep -Fq 'events.append(_event(' "${PROJECT_DIR}/src/core/battle_simulator.gd"
+          grep -Fq 'var detail_box: GridContainer' "${BATTLE}"
+          grep -Fq 'detail_box.columns = 2' "${BATTLE}"
+          grep -Fq 'button.mouse_filter = Control.MOUSE_FILTER_PASS' "${BATTLE}"
+          grep -Fqx 'const BUILD_VERSION := "0.02.4"' "${PROJECT_DIR}/src/autoload/build_identity.gd"
+          grep -Fqx 'version/name="0.02.4"' "${PROJECT_DIR}/export_presets.cfg"
 
       - name: Install Godot 4.7.1 and export templates
         shell: bash
@@ -129,20 +137,20 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          KEYSTORE="${RUNNER_TEMP}/diyse-v0.02.3-qa.keystore"
+          KEYSTORE="${RUNNER_TEMP}/diyse-v0.02.4-qa.keystore"
           keytool -genkeypair \
             -keystore "${KEYSTORE}" \
-            -storepass diyse-v0023-qa \
-            -alias diyse-v0023-qa \
-            -keypass diyse-v0023-qa \
+            -storepass diyse-v0024-qa \
+            -alias diyse-v0024-qa \
+            -keypass diyse-v0024-qa \
             -keyalg RSA \
             -keysize 2048 \
             -validity 3650 \
             -dname "CN=The Role of the Diyse QA,O=Diyse Prototype,C=US"
 
           echo "GODOT_ANDROID_KEYSTORE_DEBUG_PATH=${KEYSTORE}" >> "${GITHUB_ENV}"
-          echo "GODOT_ANDROID_KEYSTORE_DEBUG_USER=diyse-v0023-qa" >> "${GITHUB_ENV}"
-          echo "GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD=diyse-v0023-qa" >> "${GITHUB_ENV}"
+          echo "GODOT_ANDROID_KEYSTORE_DEBUG_USER=diyse-v0024-qa" >> "${GITHUB_ENV}"
+          echo "GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD=diyse-v0024-qa" >> "${GITHUB_ENV}"
 
           mkdir -p "${HOME}/.config/godot"
           "${GODOT_BIN}" --headless --editor --path "${PROJECT_DIR}" --quit-after 2 || true
@@ -180,6 +188,17 @@ jobs:
             res://src/scenes/battle_scene.tscn 2>&1 | tee battle-runtime.log
           ! grep -E "SCRIPT ERROR|Parse Error|Compile Error|Invalid call|Invalid assignment|Invalid access|ERROR:" battle-runtime.log
 
+      - name: Run retarget and touch-scroll regression test
+        shell: bash
+        run: |
+          set -o pipefail
+          "${GODOT_BIN}" \
+            --headless \
+            --path "${PROJECT_DIR}" \
+            --script res://tests/battle_polish_test.gd 2>&1 | tee battle-polish-test.log
+          grep -Fq 'PASS: dead-target retargeting and touch ability scrolling are operational.' battle-polish-test.log
+          ! grep -E "SCRIPT ERROR|Parse Error|Compile Error|BATTLE POLISH TEST FAILED|ERROR:" battle-polish-test.log
+
       - name: Export and verify signed QA APK
         shell: bash
         run: |
@@ -197,12 +216,12 @@ jobs:
           unzip -t "${APK}"
           "${ANDROID_HOME}/build-tools/35.0.1/apksigner" verify --verbose --print-certs "${APK}" | tee apk-signature.txt
           sha256sum "${APK}" | tee "${APK}.sha256"
-          cp "${APK}" "${APK}.sha256" godot-import.log battle-runtime.log godot-export.log apk-signature.txt android-artifact/
+          cp "${APK}" "${APK}.sha256" godot-import.log battle-runtime.log battle-polish-test.log godot-export.log apk-signature.txt android-artifact/
 
       - name: Upload runtime-verified APK
         uses: actions/upload-artifact@v4
         with:
-          name: The-Role-of-the-Diyse-Godot-v0.02.3-Runtime-Verified-APK
+          name: The-Role-of-the-Diyse-Godot-v0.02.4-Runtime-Verified-APK
           path: android-artifact/
           if-no-files-found: error
           retention-days: 14
