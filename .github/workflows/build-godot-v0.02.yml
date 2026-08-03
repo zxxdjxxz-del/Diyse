@@ -53,7 +53,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          base64 --decode ci/godot-v0.02/project.zip.b64 > /tmp/godot-v0.02.zip
+          cat ci/godot-v0.02/project.part.*.b64 | base64 --decode > /tmp/godot-v0.02.zip
           echo "${PAYLOAD_SHA256}  /tmp/godot-v0.02.zip" | sha256sum --check --strict
           unzip -q /tmp/godot-v0.02.zip
           test -f "${PROJECT_DIR}/project.godot"
