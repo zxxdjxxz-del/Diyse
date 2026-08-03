@@ -46,25 +46,27 @@ func _run() -> void:
     await process_frame
     await process_frame
 
-    if not (scene.detail_scroll is ScrollContainer):
+    var detail_scroll := scene.get("detail_scroll") as ScrollContainer
+    var detail_box := scene.get("detail_box") as GridContainer
+    if detail_scroll == null:
         _fail("detail scroll container is missing")
         return
-    if scene.detail_scroll.vertical_scroll_mode == ScrollContainer.SCROLL_MODE_DISABLED:
+    if detail_scroll.vertical_scroll_mode == ScrollContainer.SCROLL_MODE_DISABLED:
         _fail("vertical ability scrolling is disabled")
         return
-    if not bool(scene.detail_scroll.follow_focus):
+    if not bool(detail_scroll.follow_focus):
         _fail("ability scroll does not follow focused controls")
         return
-    if not (scene.detail_box is GridContainer) or int(scene.detail_box.columns) != 2:
+    if detail_box == null or int(detail_box.columns) != 2:
         _fail("ability choices are not arranged in the two-column touch grid")
         return
 
-    scene._show_abilities()
+    scene.call("_show_abilities")
     await process_frame
-    if scene.detail_box.get_child_count() < 4:
+    if detail_box.get_child_count() < 4:
         _fail("the ability list did not populate")
         return
-    for child in scene.detail_box.get_children():
+    for child in detail_box.get_children():
         if child is Button and child.mouse_filter != Control.MOUSE_FILTER_PASS:
             _fail("an ability button blocks touch-drag scrolling")
             return
