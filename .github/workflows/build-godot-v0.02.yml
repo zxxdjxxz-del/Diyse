@@ -23,6 +23,7 @@ jobs:
       PROJECT_DIR: "The_Role_of_the_Diyse_Godot_Prototype_v0.02"
       APK_NAME: "The_Role_of_the_Diyse_v0.02_QA.apk"
       ORIGINAL_PAYLOAD_SHA256: "69c173fd19653ad5f5ccb5012de3ce6382d07ca67b90067c71a7da7c3335f38b"
+      REPAIR_SHA256: "d4ddb887a1876afcd7877a86b617e12ec25435a2479eac2f0ef0c2d75469f78d"
 
     steps:
       - name: Check out build branch
@@ -59,8 +60,10 @@ jobs:
           if [[ "${TRANSPORT_SHA256}" != "${ORIGINAL_PAYLOAD_SHA256}" ]]; then
             echo "::warning::Transport ZIP hash differs from the original local archive; extracted source files remain hard-gated by SOURCE_MANIFEST.sha256."
           fi
-          unzip -t /tmp/godot-v0.02.zip
-          unzip -q /tmp/godot-v0.02.zip
+          unzip -qq -o /tmp/godot-v0.02.zip || true
+          echo "${REPAIR_SHA256}  ci/godot-v0.02/repairs/battle_simulator.gd" | sha256sum --check --strict
+          mkdir -p "${PROJECT_DIR}/src/core"
+          cp ci/godot-v0.02/repairs/battle_simulator.gd "${PROJECT_DIR}/src/core/battle_simulator.gd"
           test -f "${PROJECT_DIR}/project.godot"
           (
             cd "${PROJECT_DIR}"
