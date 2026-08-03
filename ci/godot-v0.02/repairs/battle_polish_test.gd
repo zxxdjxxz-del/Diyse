@@ -1,11 +1,11 @@
-extends SceneTree
+extends Node
 
-func _initialize() -> void:
+func _ready() -> void:
     call_deferred("_run")
 
 func _fail(message: String) -> void:
     push_error("BATTLE POLISH TEST FAILED: " + message)
-    quit(1)
+    get_tree().quit(1)
 
 func _run() -> void:
     var sim := BattleSimulator.new()
@@ -58,4 +58,4 @@ func _run() -> void:
             return
 
     print("PASS: dead-target retargeting and touch ability scrolling are operational.")
-    quit(0)
+    get_tree().quit(0)
