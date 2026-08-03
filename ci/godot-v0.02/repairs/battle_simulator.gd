@@ -104,7 +104,7 @@ func _lock_enemy_intents(snapshot: Dictionary) -> Array[Dictionary]:
         var enemy: Dictionary = snapshot[enemy_id]
         if not bool(enemy.get("alive", false)) or not bool(enemy.get("active", true)):
             continue
-        var idx := abs(battle_seed + round_number * 13 + int(enemy["authored_order"]) * 5) % living_party.size()
+        var idx: int = absi(battle_seed + round_number * 13 + int(enemy["authored_order"]) * 5) % living_party.size()
         var target_id: String = living_party[idx]
         var action_id := "ENEMY_ATTACK"
         if enemy_id == "EN_VS_RUIN_CHANNELER" and round_number == 1:
