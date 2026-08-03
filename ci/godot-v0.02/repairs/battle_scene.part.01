@@ -1,0 +1,95 @@
+    header_margin.add_theme_constant_override("margin_bottom", 8)
+    header_panel.add_child(header_margin)
+
+    var top := HBoxContainer.new()
+    top.add_theme_constant_override("separation", 12)
+    header_margin.add_child(top)
+
+    round_label = Label.new()
+    round_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    round_label.add_theme_font_size_override("font_size", 24)
+    round_label.add_theme_color_override("font_color", COLOR_TEXT)
+    top.add_child(round_label)
+
+    inventory_label = Label.new()
+    inventory_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+    inventory_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+    inventory_label.add_theme_font_size_override("font_size", 18)
+    inventory_label.add_theme_color_override("font_color", COLOR_MUTED)
+    top.add_child(inventory_label)
+
+    var arena_panel := PanelContainer.new()
+    arena_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    arena_panel.add_theme_stylebox_override("panel", _panel_style(COLOR_PANEL_ALT, COLOR_LINE, 10, 2))
+    root.add_child(arena_panel)
+
+    var arena_margin := MarginContainer.new()
+    arena_margin.add_theme_constant_override("margin_left", 16)
+    arena_margin.add_theme_constant_override("margin_right", 16)
+    arena_margin.add_theme_constant_override("margin_top", 12)
+    arena_margin.add_theme_constant_override("margin_bottom", 12)
+    arena_panel.add_child(arena_margin)
+
+    var stage := HBoxContainer.new()
+    stage.add_theme_constant_override("separation", 18)
+    arena_margin.add_child(stage)
+
+    var party_zone := VBoxContainer.new()
+    party_zone.custom_minimum_size = Vector2(330, 0)
+    party_zone.add_theme_constant_override("separation", 7)
+    stage.add_child(party_zone)
+    status_box = VBoxContainer.new()
+    status_box.add_theme_constant_override("separation", 7)
+    party_zone.add_child(status_box)
+
+    var middle := VBoxContainer.new()
+    middle.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    middle.add_theme_constant_override("separation", 8)
+    stage.add_child(middle)
+
+    battle_message_label = Label.new()
+    battle_message_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    battle_message_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+    battle_message_label.custom_minimum_size = Vector2(0, 52)
+    battle_message_label.add_theme_font_size_override("font_size", 28)
+    battle_message_label.add_theme_color_override("font_color", COLOR_GOLD)
+    middle.add_child(battle_message_label)
+
+    var battlefield := PanelContainer.new()
+    battlefield.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    battlefield.custom_minimum_size = Vector2(0, 150)
+    battlefield.add_theme_stylebox_override("panel", _panel_style(Color(0.1, 0.115, 0.13, 1.0), Color(0.38, 0.34, 0.27, 1.0), 8, 2))
+    middle.add_child(battlefield)
+
+    var field_text := Label.new()
+    field_text.text = "RUIN ATRIUM\nGRAY-BOX BATTLE STAGE"
+    field_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    field_text.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+    field_text.add_theme_font_size_override("font_size", 23)
+    field_text.add_theme_color_override("font_color", Color(0.72, 0.67, 0.56, 1.0))
+    battlefield.add_child(field_text)
+
+    var log_panel := PanelContainer.new()
+    log_panel.custom_minimum_size = Vector2(0, 126)
+    log_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.025, 0.032, 0.045, 0.95), Color(0.2, 0.27, 0.36, 1.0), 6, 1))
+    middle.add_child(log_panel)
+
+    var log_margin := MarginContainer.new()
+    log_margin.add_theme_constant_override("margin_left", 10)
+    log_margin.add_theme_constant_override("margin_right", 10)
+    log_margin.add_theme_constant_override("margin_top", 8)
+    log_margin.add_theme_constant_override("margin_bottom", 8)
+    log_panel.add_child(log_margin)
+
+    log_label = RichTextLabel.new()
+    log_label.bbcode_enabled = true
+    log_label.fit_content = false
+    log_label.scroll_active = true
+    log_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    log_label.add_theme_font_size_override("normal_font_size", 17)
+    log_label.add_theme_color_override("default_color", COLOR_TEXT)
+    log_margin.add_child(log_label)
+
+    var enemy_zone := VBoxContainer.new()
+    enemy_zone.custom_minimum_size = Vector2(330, 0)
+    enemy_zone.add_theme_constant_override("separation", 7)
