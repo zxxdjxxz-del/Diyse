@@ -21,7 +21,7 @@ jobs:
     env:
       GODOT_VERSION: "4.7.1"
       PROJECT_DIR: "The_Role_of_the_Diyse_Godot_Prototype_v0.02"
-      APK_NAME: "The_Role_of_the_Diyse_v0.02_QA.apk"
+      APK_NAME: "The_Role_of_the_Diyse_v0.02.1_QA.apk"
       ORIGINAL_PAYLOAD_SHA256: "69c173fd19653ad5f5ccb5012de3ce6382d07ca67b90067c71a7da7c3335f38b"
       REPAIR_SHA256: "d4ddb887a1876afcd7877a86b617e12ec25435a2479eac2f0ef0c2d75469f78d"
 
@@ -72,7 +72,7 @@ jobs:
           python "${PROJECT_DIR}/tools/validate_project.py"
           python "${PROJECT_DIR}/tests/reference_battle_test.py"
 
-      - name: Apply Godot 4.7 and Android compatibility fixes
+      - name: Apply Godot 4.7, Android, and gameplay QA fixes
         shell: bash
         run: |
           set -euo pipefail
@@ -92,6 +92,12 @@ jobs:
             sed -i '/^\[rendering\]$/a textures/vram_compression/import_etc2_astc=true' "${PROJECT_SETTINGS}"
           fi
           grep -qx 'textures/vram_compression/import_etc2_astc=true' "${PROJECT_SETTINGS}"
+          python ci/godot-v0.02/repairs/apply_qa_fixes.py "${PROJECT_DIR}"
+          grep -Fq 'right * input_vector.x - forward * input_vector.y' "${RUIN}"
+          grep -Fq 'player.global_position.z <= -3.0' "${RUIN}"
+          grep -Fq '_start_battle("ORDINARY", "FORM_VS_A")' "${RUIN}"
+          grep -Fqx 'const BUILD_VERSION := "0.02.1"' "${PROJECT_DIR}/src/autoload/build_identity.gd"
+          grep -Fqx 'version/name="0.02.1"' "${PROJECT_DIR}/export_presets.cfg"
 
       - name: Install Godot editor and Android export templates
         shell: bash
@@ -180,7 +186,7 @@ jobs:
       - name: Upload installable Godot APK
         uses: actions/upload-artifact@v4
         with:
-          name: The-Role-of-the-Diyse-Godot-v0.02-QA-APK
+          name: The-Role-of-the-Diyse-Godot-v0.02.1-QA-APK
           path: android-artifact/
           if-no-files-found: error
           retention-days: 14
