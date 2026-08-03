@@ -72,6 +72,20 @@ jobs:
           python "${PROJECT_DIR}/tools/validate_project.py"
           python "${PROJECT_DIR}/tests/reference_battle_test.py"
 
+      - name: Apply Godot 4.7 compatibility fixes
+        shell: bash
+        run: |
+          set -euo pipefail
+          JOYSTICK="${PROJECT_DIR}/src/ui/virtual_joystick.gd"
+          RUIN="${PROJECT_DIR}/src/scenes/ruin_scene.gd"
+          grep -qx 'class_name VirtualJoystick' "${JOYSTICK}"
+          grep -q 'VirtualJoystick' "${RUIN}"
+          sed -i 's/^class_name VirtualJoystick$/class_name DiyseVirtualJoystick/' "${JOYSTICK}"
+          sed -i 's/VirtualJoystick/DiyseVirtualJoystick/g' "${RUIN}"
+          grep -qx 'class_name DiyseVirtualJoystick' "${JOYSTICK}"
+          grep -q 'DiyseVirtualJoystick' "${RUIN}"
+          ! grep -RIn --include='*.gd' 'VirtualJoystick' "${PROJECT_DIR}/src"
+
       - name: Install Godot editor and Android export templates
         shell: bash
         run: |
