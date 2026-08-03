@@ -84,7 +84,7 @@ jobs:
           sed -i 's/VirtualJoystick/DiyseVirtualJoystick/g' "${RUIN}"
           grep -qx 'class_name DiyseVirtualJoystick' "${JOYSTICK}"
           grep -q 'DiyseVirtualJoystick' "${RUIN}"
-          ! grep -RIn --include='*.gd' 'VirtualJoystick' "${PROJECT_DIR}/src"
+          ! grep -RInw --include='*.gd' 'VirtualJoystick' "${PROJECT_DIR}/src"
 
       - name: Install Godot editor and Android export templates
         shell: bash
