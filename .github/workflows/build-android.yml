@@ -1,0 +1,165 @@
+name: Build Diyse Android APK
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate map and traversal traceability
+        run: python ci/validate-map-traceability.py
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle 8.9
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android packages
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0" "platform-tools"
+
+      - name: Install deterministic visual-render dependencies
+        run: python -m pip install --disable-pip-version-check pillow==12.2.0 numpy==2.3.5
+
+      - name: Reconstruct source archive
+        run: |
+          cat source_parts/source.part.* > Diyse_Source.zip
+          mkdir source
+          unzip -q Diyse_Source.zip -d source
+          test -f source/settings.gradle
+
+      - name: Patch prototype compatibility issues
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          art_path = Path("source/core/src/main/java/com/dj/diyse/ui/PrototypeArt.java")
+          art = art_path.read_text()
+          old_art = "        pixmap.fillEllipse(18, 8, 92, 24);"
+          new_art = """        pixmap.fillRectangle(28, 12, 72, 16);
+                  pixmap.fillCircle(28, 20, 8);
+                  pixmap.fillCircle(100, 20, 8);"""
+          if old_art not in art:
+              raise SystemExit("Expected fillEllipse call was not found.")
+          art_path.write_text(art.replace(old_art, new_art))
+
+          gradle_path = Path("source/android/build.gradle")
+          gradle = gradle_path.read_text()
+          marker = "configurations { natives }"
+          replacement = """configurations { natives }
+
+          configurations.configureEach {
+              resolutionStrategy.force 'androidx.core:core:1.15.0'
+          }"""
+          if marker not in gradle:
+              raise SystemExit("Expected Android configurations marker was not found.")
+          gradle_path.write_text(gradle.replace(marker, replacement, 1))
+          PY
+
+      - name: Patch and verify save-button behavior
+        run: python ci/patch-save-button.py
+
+      - name: Apply Diyse v0.02 identity and save-schema pass
+        run: python ci/patch-v002.py
+
+      - name: Repair missing runtime artwork references
+        run: python ci/patch-runtime-assets.py
+
+      - name: Apply Diyse v0.03 party, objective, and signing pass
+        run: python ci/patch-v003.py
+
+      - name: Apply Diyse v0.04 core-menu and exploration pass
+        run: python ci/patch-v004.py
+
+      - name: Apply Diyse v0.05 combat-depth pass
+        run: python ci/patch-v005.py
+
+      - name: Apply Diyse v0.06A fixed-camera graphics slice
+        run: python ci/patch-v006a.py
+
+      - name: Apply Diyse v0.06B field-presentation refinement
+        run: python ci/patch-v006b.py
+
+      - name: Apply Diyse v0.06C battle graphics vertical slice
+        run: python ci/patch-v006c.py
+
+      - name: Apply Diyse v0.06D battle orientation correction
+        run: python ci/patch-v006d.py
+
+      - name: Apply Diyse v0.06E battle background orientation correction
+        run: python ci/patch-v006e.py
+
+      - name: Apply Diyse v0.07 MP and Card foundation pass
+        run: python ci/patch-v007.py
+
+      - name: Apply Diyse v0.08 Card loadout interaction pass
+        run: python ci/patch-v008.py
+
+      - name: Apply Diyse v0.09A pre-rendered field calibration
+        run: python ci/patch-v009a.py
+
+      - name: Apply Diyse v0.09B full gatehouse traversal route
+        run: python ci/patch-v009b.py
+
+      - name: Apply Diyse v0.09C authored gatehouse visual slice
+        run: python ci/patch-v009c.py
+
+      - name: Package reconstructed v0.09C source
+        run: zip -qr Diyse-v0.09C-runtime-source.zip source
+
+      - name: Upload reconstructed v0.09C source
+        uses: actions/upload-artifact@v4
+        with:
+          name: Diyse-v0.09C-Runtime-Source
+          path: Diyse-v0.09C-runtime-source.zip
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Run authored-asset contracts, gatehouse traversal, calibration regression, Card, battle, MP, save, presentation, field, progression, menu, inventory, and version tests
+        working-directory: source
+        run: gradle --no-daemon --stacktrace :core:test
+
+      - name: Build debug APK
+        working-directory: source
+        run: gradle --no-daemon --stacktrace :android:assembleDebug
+
+      - name: Verify built APK signature and certificate
+        run: |
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs \
+            source/android/build/outputs/apk/debug/android-debug.apk | tee apk-signature.txt
+          grep -i "bf0340d1a6cc6bcbc2654cf05e53ec39602c470dcb1ecc88c61574104099c073" apk-signature.txt
+          cp apk-signature.txt prototype-certificate.txt
+
+      - name: Upload installable APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Diyse-Prototype-v0.09C-APK
+          path: |
+            source/android/build/outputs/apk/debug/android-debug.apk
+            apk-signature.txt
+            prototype-certificate.txt
+          if-no-files-found: error
+          retention-days: 30
