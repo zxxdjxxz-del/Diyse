@@ -1,0 +1,26 @@
+name: Report WP-01R Tree
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/report-wp01r-tree.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  report-tree:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Report target tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin refs/heads/agent/godot-wp01r:refs/remotes/origin/agent/godot-wp01r
+          test "$(git rev-parse refs/remotes/origin/agent/godot-wp01r)" = "71f481f676acb98681b9a16cd415cc682a271f28"
+          echo "TARGET_TREE=$(git rev-parse refs/remotes/origin/agent/godot-wp01r^{tree})"
