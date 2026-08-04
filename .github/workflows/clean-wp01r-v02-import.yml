@@ -1,0 +1,89 @@
+name: Clean WP-01R v0.2 Import
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/clean-wp01r-v02-import.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: clean-wp01r-v02-import
+  cancel-in-progress: false
+
+jobs:
+  clean-import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      TARGET_BRANCH: "agent/godot-wp01r"
+      EXPECTED_HEAD: "71f481f676acb98681b9a16cd415cc682a271f28"
+      AUTHORITY_ZIP_SHA256: "89bb3e75aa2658471bf1a092901fb69adcc1dd44059db8d1a96685e8f305fc19"
+      WP01R_DIR: "ci/godot-v0.02/wp01r-v0.2"
+      BUILD_WORKFLOW: ".github/workflows/build-godot-v0.03.1-wp01r-v02.yml"
+
+    steps:
+      - name: Check out cleanup branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify and check out target branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          REMOTE_HEAD="$(git ls-remote origin "refs/heads/${TARGET_BRANCH}" | awk '{print $1}')"
+          test "${REMOTE_HEAD}" = "${EXPECTED_HEAD}"
+          git fetch origin "refs/heads/${TARGET_BRANCH}:refs/remotes/origin/${TARGET_BRANCH}"
+          git checkout -B wp01r-cleanup "refs/remotes/origin/${TARGET_BRANCH}"
+
+      - name: Clean generated and stale transport files
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f .github/workflows/bootstrap-wp01r-publication.yml
+          rm -rf "${WP01R_DIR}/__pycache__"
+          find "${WP01R_DIR}" -type f -name '*.pyc' -delete
+          ! find . -type d -name __pycache__ -print -quit | grep -q .
+          ! find . -type f -name '*.pyc' -print -quit | grep -q .
+
+      - name: Repair imported WP-01R directory reference
+        shell: bash
+        run: |
+          set -euo pipefail
+          sed -i 's|WP01R_DIR="ci/godot-v0.02/wp01r"|WP01R_DIR="ci/godot-v0.02/wp01r-v0.2"|g' "${BUILD_WORKFLOW}"
+          test "$(grep -Fc 'WP01R_DIR="ci/godot-v0.02/wp01r-v0.2"' "${BUILD_WORKFLOW}")" -eq 2
+          ! grep -Fq 'WP01R_DIR="ci/godot-v0.02/wp01r"' "${BUILD_WORKFLOW}"
+          test -f "${WP01R_DIR}/apply_wp01r.py"
+          test -f "${WP01R_DIR}/authority_manager.gd"
+          test -f "${WP01R_DIR}/validate_wp01r_authority.py"
+          test "$(find "${WP01R_DIR}" -maxdepth 1 -type f -name 'authority.part.*.b64' | wc -l)" -eq 4
+
+      - name: Verify exact v1.12 authority payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat "${WP01R_DIR}"/authority.part.*.b64 | base64 --decode > /tmp/diyse-authority-v1.12.zip
+          echo "${AUTHORITY_ZIP_SHA256}  /tmp/diyse-authority-v1.12.zip" | sha256sum --check --strict
+          unzip -t /tmp/diyse-authority-v1.12.zip
+          rm -rf /tmp/diyse-authority-v1.12
+          mkdir -p /tmp/diyse-authority-v1.12
+          unzip -q /tmp/diyse-authority-v1.12.zip -d /tmp/diyse-authority-v1.12
+          python "${WP01R_DIR}/validate_wp01r_authority.py" /tmp/diyse-authority-v1.12 | tee /tmp/wp01r-v02-validation.log
+          grep -Fq "WP-01R VALIDATION: PASS" /tmp/wp01r-v02-validation.log
+
+      - name: Commit coherent cleanup
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "Diyse WP-01R Cleanup"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          test -n "$(git diff --cached --name-only)"
+          ! git diff --cached --name-only | grep -E '(^|/)__pycache__/|\.pyc$'
+          git commit -m "Clean WP-01R v0.2 import for CI"
+          git push origin \
+            --force-with-lease="refs/heads/${TARGET_BRANCH}:${EXPECTED_HEAD}" \
+            "HEAD:refs/heads/${TARGET_BRANCH}"
