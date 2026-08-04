@@ -1,0 +1,95 @@
+extends Control
+
+var sim := BattleSimulator.new()
+var status_box: VBoxContainer
+var enemy_box: VBoxContainer
+var command_box: GridContainer
+var detail_box: VBoxContainer
+var log_label: RichTextLabel
+var round_label: Label
+var plan_label: Label
+var inventory_label: Label
+var confirm_button: Button
+var battle_message_label: Label
+var current_party_index := 0
+var planning_ids: Array[String] = []
+var plans: Array[Dictionary] = []
+var pending_action: Dictionary = {}
+var phase := "PLANNING"
+
+const ABILITIES := {
+    "HERO_CYANIS": ["CREST_STRIKE", "GUARDIAN_SIGIL", "HARMONIZING_WARD", "RESOLUTE_COUNTER"],
+    "HERO_ILYRA": ["MEND", "CLEAR_WARDING", "RENEWAL", "WARDENS_VALOR"],
+    "HERO_TORREN": ["DRIVING_STRIKE", "QUARRY_APPRAISAL", "WATCHFUL_AIM", "PINNING_STRIKE"],
+    "HERO_MAEVRA": ["OATH_STRIKE", "GUARDED_OATH", "STEADFAST_CHALLENGE", "OATH_COUNTER"],
+    "HERO_NIMERA": ["DIYSEAN_APPRAISAL", "REWOVEN", "WEAVE_GUARD", "PREPARED_THREAD"],
+}
+
+const CARDS := [
+    ["CARD_IRON_TESTAMENT", "IRON_TESTAMENT"],
+    ["CARD_SUNDER_THE_GATE", "SUNDER_THE_GATE"],
+    ["CARD_CINDER_JUDGMENT", "CINDER_JUDGMENT"],
+    ["CARD_THUNDER_CHAIN", "THUNDER_CHAIN"],
+]
+
+const COLOR_BG := Color(0.025, 0.035, 0.055, 1.0)
+const COLOR_PANEL := Color(0.075, 0.095, 0.13, 0.98)
+const COLOR_PANEL_ALT := Color(0.045, 0.06, 0.085, 0.98)
+const COLOR_LINE := Color(0.31, 0.42, 0.56, 1.0)
+const COLOR_GOLD := Color(0.95, 0.77, 0.31, 1.0)
+const COLOR_PARTY := Color(0.23, 0.55, 0.9, 1.0)
+const COLOR_ENEMY := Color(0.82, 0.25, 0.24, 1.0)
+const COLOR_TEXT := Color(0.94, 0.96, 1.0, 1.0)
+const COLOR_MUTED := Color(0.69, 0.75, 0.84, 1.0)
+
+func _ready() -> void:
+    _build_ui()
+    _start_battle()
+
+func _start_battle() -> void:
+    sim.setup(BattleContext.battle_kind, BattleContext.formation_id, BattleContext.seed)
+    plans.clear()
+    current_party_index = 0
+    planning_ids = sim.living_party()
+    phase = "PLANNING"
+    log_label.text = "[b]Battle initialized.[/b]\nChoose one action for every conscious party member.\n"
+    for event in sim.start_round():
+        _append_event(event)
+    _refresh_all()
+    _show_commands()
+
+func _build_ui() -> void:
+    set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+
+    var bg := ColorRect.new()
+    bg.color = COLOR_BG
+    bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    add_child(bg)
+
+    var upper_glow := ColorRect.new()
+    upper_glow.color = Color(0.08, 0.13, 0.19, 0.7)
+    upper_glow.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
+    upper_glow.custom_minimum_size = Vector2(0, 150)
+    add_child(upper_glow)
+
+    var margin := MarginContainer.new()
+    margin.add_theme_constant_override("margin_left", 18)
+    margin.add_theme_constant_override("margin_right", 18)
+    margin.add_theme_constant_override("margin_top", 14)
+    margin.add_theme_constant_override("margin_bottom", 14)
+    margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    add_child(margin)
+
+    var root := VBoxContainer.new()
+    root.add_theme_constant_override("separation", 10)
+    margin.add_child(root)
+
+    var header_panel := PanelContainer.new()
+    header_panel.custom_minimum_size = Vector2(0, 58)
+    header_panel.add_theme_stylebox_override("panel", _panel_style(COLOR_PANEL, COLOR_LINE, 8, 2))
+    root.add_child(header_panel)
+
+    var header_margin := MarginContainer.new()
+    header_margin.add_theme_constant_override("margin_left", 16)
+    header_margin.add_theme_constant_override("margin_right", 16)
+    header_margin.add_theme_constant_override("margin_top", 8)

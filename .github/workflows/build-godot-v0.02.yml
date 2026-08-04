@@ -1,0 +1,200 @@
+name: Build Godot v0.02 Android APK
+
+on:
+  pull_request:
+    paths:
+      - "ci/godot-v0.02/**"
+      - ".github/workflows/build-godot-v0.02.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: godot-v0.02-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-android-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      GODOT_VERSION: "4.7.1"
+      PROJECT_DIR: "The_Role_of_the_Diyse_Godot_Prototype_v0.02"
+      APK_NAME: "The_Role_of_the_Diyse_v0.02.3_QA.apk"
+      ORIGINAL_PAYLOAD_SHA256: "69c173fd19653ad5f5ccb5012de3ce6382d07ca67b90067c71a7da7c3335f38b"
+      REPAIR_SHA256: "ca6cdb5aa2fa65031dd4d41bc53ce2f3a55c7bb1c50b8ca08da3ea23d893c59a"
+      BATTLE_SCENE_SHA256: "f9a391784df0bd24afa2e9d0ad1ee5739827e4c6d25a131fc80ebd519c977ea8"
+
+    steps:
+      - name: Check out build branch
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install required Android packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager \
+            "platform-tools" \
+            "build-tools;35.0.1" \
+            "platforms;android-35" \
+            "cmake;3.10.2.4988404" \
+            "ndk;28.1.13356709"
+
+      - name: Reconstruct and verify Godot source
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat ci/godot-v0.02/project.part.*.b64 | base64 --decode > /tmp/godot-v0.02.zip
+          TRANSPORT_SHA256="$(sha256sum /tmp/godot-v0.02.zip | awk '{print $1}')"
+          echo "Transport ZIP SHA-256: ${TRANSPORT_SHA256}"
+          if [[ "${TRANSPORT_SHA256}" != "${ORIGINAL_PAYLOAD_SHA256}" ]]; then
+            echo "::warning::Transport ZIP hash differs from the original local archive; extracted source files remain hard-gated by SOURCE_MANIFEST.sha256."
+          fi
+          unzip -qq -o /tmp/godot-v0.02.zip || true
+          echo "${REPAIR_SHA256}  ci/godot-v0.02/repairs/battle_simulator.gd" | sha256sum --check --strict
+          mkdir -p "${PROJECT_DIR}/src/core"
+          cp ci/godot-v0.02/repairs/battle_simulator.gd "${PROJECT_DIR}/src/core/battle_simulator.gd"
+          test -f "${PROJECT_DIR}/project.godot"
+          (
+            cd "${PROJECT_DIR}"
+            sha256sum --strict -c SOURCE_MANIFEST.sha256
+          )
+          python "${PROJECT_DIR}/tools/validate_project.py"
+          python "${PROJECT_DIR}/tests/reference_battle_test.py"
+
+      - name: Apply Godot 4.7, Android, and gameplay QA fixes
+        shell: bash
+        run: |
+          set -euo pipefail
+          JOYSTICK="${PROJECT_DIR}/src/ui/virtual_joystick.gd"
+          RUIN="${PROJECT_DIR}/src/scenes/ruin_scene.gd"
+          BATTLE="${PROJECT_DIR}/src/scenes/battle_scene.gd"
+          PROJECT_SETTINGS="${PROJECT_DIR}/project.godot"
+          grep -qx 'class_name VirtualJoystick' "${JOYSTICK}"
+          grep -q 'VirtualJoystick' "${RUIN}"
+          sed -i 's/^class_name VirtualJoystick$/class_name DiyseVirtualJoystick/' "${JOYSTICK}"
+          sed -i 's/VirtualJoystick/DiyseVirtualJoystick/g' "${RUIN}"
+          grep -qx 'class_name DiyseVirtualJoystick' "${JOYSTICK}"
+          grep -q 'DiyseVirtualJoystick' "${RUIN}"
+          ! grep -RInw --include='*.gd' 'VirtualJoystick' "${PROJECT_DIR}/src"
+          if grep -q '^textures/vram_compression/import_etc2_astc=' "${PROJECT_SETTINGS}"; then
+            sed -i 's|^textures/vram_compression/import_etc2_astc=.*$|textures/vram_compression/import_etc2_astc=true|' "${PROJECT_SETTINGS}"
+          else
+            sed -i '/^\[rendering\]$/a textures/vram_compression/import_etc2_astc=true' "${PROJECT_SETTINGS}"
+          fi
+          grep -qx 'textures/vram_compression/import_etc2_astc=true' "${PROJECT_SETTINGS}"
+          python ci/godot-v0.02/repairs/apply_qa_fixes.py "${PROJECT_DIR}"
+          cat ci/godot-v0.02/repairs/battle_scene.part.* > "${BATTLE}"
+          echo "${BATTLE_SCENE_SHA256}  ${BATTLE}" | sha256sum --check --strict
+          grep -Fq 'right * input_vector.x - forward * input_vector.y' "${RUIN}"
+          grep -Fq 'player.global_position.z <= -3.0' "${RUIN}"
+          grep -Fq '_start_battle("ORDINARY", "FORM_VS_A")' "${RUIN}"
+          grep -Fq 'GRAY-BOX BATTLE STAGE' "${BATTLE}"
+          grep -Fq 'CONFIRM ROUND' "${BATTLE}"
+          grep -Fq 'ProgressBar.new()' "${BATTLE}"
+          grep -Fq 'var idx: int = absi' "${PROJECT_DIR}/src/core/battle_simulator.gd"
+          grep -Fqx 'const BUILD_VERSION := "0.02.3"' "${PROJECT_DIR}/src/autoload/build_identity.gd"
+          grep -Fqx 'version/name="0.02.3"' "${PROJECT_DIR}/export_presets.cfg"
+
+      - name: Install Godot editor and Android export templates
+        shell: bash
+        run: |
+          set -euo pipefail
+          GODOT_ROOT="${RUNNER_TEMP}/godot"
+          TEMPLATE_ROOT="${HOME}/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
+          mkdir -p "${GODOT_ROOT}" "${TEMPLATE_ROOT}"
+          curl --fail --location --retry 4 --retry-delay 3 \
+            --output /tmp/godot.zip \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          unzip -q /tmp/godot.zip -d "${GODOT_ROOT}"
+          mv "${GODOT_ROOT}/Godot_v${GODOT_VERSION}-stable_linux.x86_64" "${GODOT_ROOT}/godot"
+          chmod +x "${GODOT_ROOT}/godot"
+          curl --fail --location --retry 4 --retry-delay 3 \
+            --output /tmp/templates.tpz \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          unzip -q /tmp/templates.tpz -d /tmp/godot-templates
+          cp -a /tmp/godot-templates/templates/. "${TEMPLATE_ROOT}/"
+          echo "GODOT_BIN=${GODOT_ROOT}/godot" >> "${GITHUB_ENV}"
+          "${GODOT_ROOT}/godot" --version
+          test -f "${TEMPLATE_ROOT}/android_debug.apk"
+
+      - name: Configure Android export and QA signing
+        shell: bash
+        run: |
+          set -euo pipefail
+          KEYSTORE="${RUNNER_TEMP}/diyse-v0.02-qa.keystore"
+          keytool -genkeypair \
+            -keystore "${KEYSTORE}" \
+            -storepass diyse-v002-qa \
+            -alias diyse-v002-qa \
+            -keypass diyse-v002-qa \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 3650 \
+            -dname "CN=The Role of the Diyse QA,O=Diyse Prototype,C=US"
+          echo "GODOT_ANDROID_KEYSTORE_DEBUG_PATH=${KEYSTORE}" >> "${GITHUB_ENV}"
+          echo "GODOT_ANDROID_KEYSTORE_DEBUG_USER=diyse-v002-qa" >> "${GITHUB_ENV}"
+          echo "GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD=diyse-v002-qa" >> "${GITHUB_ENV}"
+
+          mkdir -p "${HOME}/.config/godot"
+          "${GODOT_BIN}" --headless --editor --path "${PROJECT_DIR}" --quit-after 2 || true
+          SETTINGS_FILE="$(find "${HOME}/.config/godot" -maxdepth 1 -type f -name 'editor_settings-4*.tres' | head -n 1)"
+          if [[ -z "${SETTINGS_FILE}" ]]; then
+            SETTINGS_FILE="${HOME}/.config/godot/editor_settings-4.tres"
+            printf '[gd_resource type="EditorSettings" format=3]\n\n[resource]\n' > "${SETTINGS_FILE}"
+          fi
+          printf '\nexport/android/android_sdk_path = "%s"\n' "${ANDROID_HOME}" >> "${SETTINGS_FILE}"
+          printf 'export/android/java_sdk_path = "%s"\n' "${JAVA_HOME}" >> "${SETTINGS_FILE}"
+          printf 'export/android/shutdown_adb_on_exit = false\n' >> "${SETTINGS_FILE}"
+          echo "Using Godot settings file: ${SETTINGS_FILE}"
+          tail -n 12 "${SETTINGS_FILE}"
+
+      - name: Parse and import project in Godot 4.7.1
+        shell: bash
+        run: |
+          set -o pipefail
+          "${GODOT_BIN}" \
+            --headless \
+            --editor \
+            --path "${PROJECT_DIR}" \
+            --import \
+            --quit-after 20 \
+            --verbose 2>&1 | tee godot-parse.log
+          ! grep -E "SCRIPT ERROR|Parse Error|ERROR: Failed to load script" godot-parse.log
+
+      - name: Export signed Android QA APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "${PROJECT_DIR}/build/android" android-artifact
+          "${GODOT_BIN}" \
+            --headless \
+            --path "${PROJECT_DIR}" \
+            --export-debug "Android QA" \
+            "${GITHUB_WORKSPACE}/${PROJECT_DIR}/build/android/${APK_NAME}" \
+            --verbose 2>&1 | tee godot-export.log
+          APK="${PROJECT_DIR}/build/android/${APK_NAME}"
+          test -s "${APK}"
+          unzip -t "${APK}"
+          "${ANDROID_HOME}/build-tools/35.0.1/apksigner" verify --verbose --print-certs "${APK}" | tee apk-signature.txt
+          sha256sum "${APK}" | tee "${APK}.sha256"
+          cp "${APK}" "${APK}.sha256" godot-parse.log godot-export.log apk-signature.txt android-artifact/
+
+      - name: Upload installable Godot APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: The-Role-of-the-Diyse-Godot-v0.02.3-QA-APK
+          path: android-artifact/
+          if-no-files-found: error
+          retention-days: 14

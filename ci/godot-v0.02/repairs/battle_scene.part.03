@@ -1,0 +1,95 @@
+        if not bool(actor.get("active", true)):
+            continue
+        enemy_box.add_child(_actor_card(actor, false, false))
+
+func _actor_card(actor: Dictionary, is_party: bool, selected: bool) -> Control:
+    var alive := bool(actor.get("alive", true))
+    var accent_color := COLOR_PARTY if is_party else COLOR_ENEMY
+    if selected:
+        accent_color = COLOR_GOLD
+    if not alive:
+        accent_color = Color(0.35, 0.37, 0.42, 1.0)
+
+    var card := PanelContainer.new()
+    card.custom_minimum_size = Vector2(0, 61)
+    card.add_theme_stylebox_override("panel", _panel_style(Color(0.055, 0.07, 0.095, 0.98), accent_color, 7, 2 if selected else 1))
+
+    var row := HBoxContainer.new()
+    row.add_theme_constant_override("separation", 9)
+    card.add_child(row)
+
+    var accent := ColorRect.new()
+    accent.color = accent_color
+    accent.custom_minimum_size = Vector2(10, 0)
+    row.add_child(accent)
+
+    var body := VBoxContainer.new()
+    body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    body.add_theme_constant_override("separation", 2)
+    row.add_child(body)
+
+    var name_label := Label.new()
+    name_label.text = "%s%s" % [str(actor.get("name", "Unknown")), "  [DOWN]" if not alive else ""]
+    name_label.add_theme_font_size_override("font_size", 18)
+    name_label.add_theme_color_override("font_color", COLOR_TEXT if alive else COLOR_MUTED)
+    body.add_child(name_label)
+
+    var hp_row := HBoxContainer.new()
+    hp_row.add_theme_constant_override("separation", 8)
+    body.add_child(hp_row)
+
+    var hp_bar := ProgressBar.new()
+    hp_bar.max_value = maxf(1.0, float(actor.get("max_hp", 1)))
+    hp_bar.value = float(actor.get("hp", 0))
+    hp_bar.show_percentage = false
+    hp_bar.custom_minimum_size = Vector2(0, 18)
+    hp_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    hp_bar.add_theme_stylebox_override("background", _panel_style(Color(0.02, 0.025, 0.035, 1.0), Color(0.13, 0.16, 0.21, 1.0), 4, 1))
+    hp_bar.add_theme_stylebox_override("fill", _panel_style(accent_color.darkened(0.15), accent_color, 4, 0))
+    hp_row.add_child(hp_bar)
+
+    var hp_label := Label.new()
+    hp_label.text = "%d / %d" % [int(actor.get("hp", 0)), int(actor.get("max_hp", 0))]
+    hp_label.custom_minimum_size = Vector2(96, 0)
+    hp_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+    hp_label.add_theme_font_size_override("font_size", 16)
+    hp_label.add_theme_color_override("font_color", COLOR_MUTED)
+    hp_row.add_child(hp_label)
+
+    if int(actor.get("barrier", 0)) > 0:
+        var barrier_label := Label.new()
+        barrier_label.text = "Barrier %d" % int(actor.get("barrier", 0))
+        barrier_label.add_theme_font_size_override("font_size", 14)
+        barrier_label.add_theme_color_override("font_color", Color(0.55, 0.82, 1.0, 1.0))
+        body.add_child(barrier_label)
+
+    return card
+
+func _refresh_plan_label() -> void:
+    if phase == "VICTORY":
+        battle_message_label.text = "VICTORY"
+        plan_label.text = "The enemy formation has been defeated."
+        return
+    if phase == "DEFEAT":
+        battle_message_label.text = "PARTY DEFEATED"
+        plan_label.text = "Retry the battle or return to the title screen."
+        return
+    if phase != "PLANNING":
+        battle_message_label.text = "RESOLVING ROUND"
+        plan_label.text = "Actions are resolving in priority and Speed order."
+        return
+    if current_party_index < planning_ids.size():
+        var actor_id: String = planning_ids[current_party_index]
+        var actor_name := str(sim.actor(actor_id)["name"])
+        battle_message_label.text = "COMMAND: %s" % actor_name.to_upper()
+        plan_label.text = "Choose %s's action.   Planned %d / %d" % [actor_name, plans.size(), planning_ids.size()]
+    else:
+        battle_message_label.text = "ROUND PLAN READY"
+        var lines: Array[String] = ["Review the plan, then confirm:"]
+        for plan in plans:
+            lines.append("• %s → %s" % [sim.actor(plan["actor_id"])["name"], str(plan["action_id"]).replace("_", " ").capitalize()])
+        plan_label.text = "   ".join(lines)
+
+func _show_commands() -> void:
+    _clear(command_box)
+    _clear(detail_box)
