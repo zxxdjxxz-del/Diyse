@@ -5,6 +5,7 @@ on:
     paths:
       - ".github/workflows/bootstrap-wp02-source.yml"
       - "ci/godot-v0.02/wp02-transport/**"
+      - "ci/godot-v0.02/wp02/fix_save_hash_canonicalization.py"
   workflow_dispatch:
 
 permissions:
@@ -29,7 +30,7 @@ jobs:
           ref: agent/godot-wp02
           fetch-depth: 0
 
-      - name: Reconstruct and verify source package
+      - name: Reconstruct, repair, and verify source package
         shell: bash
         run: |
           set -euo pipefail
@@ -40,6 +41,9 @@ jobs:
           test -f ci/godot-v0.02/wp02/save_foundation.gd
           test -f ci/godot-v0.02/wp02/wp02_save_regression_test.gd
           test -f ci/godot-v0.02/wp02/run_wp02_ci.sh
+          test -f ci/godot-v0.02/wp02/fix_save_hash_canonicalization.py
+          python ci/godot-v0.02/wp02/fix_save_hash_canonicalization.py
+          grep -F 'var canonical = JSON.parse_string(serialized)' ci/godot-v0.02/wp02/save_foundation.gd
           python ci/godot-v0.02/wp02/validate_wp02_contract.py ci/godot-v0.02/wp02
           ! find ci/godot-v0.02/wp02 -type d -name __pycache__ -print -quit | grep -q .
           ! find ci/godot-v0.02/wp02 -type f -name '*.pyc' -print -quit | grep -q .
@@ -56,5 +60,5 @@ jobs:
             exit 0
           fi
           ! git diff --cached --name-only | grep -E '(^|/)__pycache__/|\.pyc$'
-          git commit -m "Add WP-02 save and migration foundation"
+          git commit -m "Fix WP-02 canonical save hashing"
           git push origin HEAD:refs/heads/${TARGET_BRANCH}
