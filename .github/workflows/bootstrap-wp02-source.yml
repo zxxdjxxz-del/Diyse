@@ -20,7 +20,7 @@ jobs:
     timeout-minutes: 15
     env:
       TARGET_BRANCH: "agent/godot-wp02"
-      PAYLOAD_SHA256: "828d9201c7229efd7ee1d468535c5c30eb65bafc2173bbe45f78f76c08a79278"
+      PAYLOAD_SHA256: "4f86a36ce81a96e40ab8b8d37dcec616c19ccad55de4644e395d75f1adca67b6"
 
     steps:
       - name: Check out WP-02 branch
