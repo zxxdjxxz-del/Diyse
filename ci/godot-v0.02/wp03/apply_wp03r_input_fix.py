@@ -30,9 +30,15 @@ def patch_scene(path: Path, add_menu: bool) -> None:
     )
     new_unhandled = (
         'func _unhandled_input(event: InputEvent) -> void:\n'
-        '    if InputMap.has_action("interact") and event.is_action_pressed("interact"):\n'
+        '    var interact_pressed := event.is_action_pressed("ui_accept")\n'
+        '    if InputMap.has_action("interact"):\n'
+        '        interact_pressed = interact_pressed or event.is_action_pressed("interact")\n'
+        '    var pause_pressed := event.is_action_pressed("ui_cancel")\n'
+        '    if InputMap.has_action("pause"):\n'
+        '        pause_pressed = pause_pressed or event.is_action_pressed("pause")\n'
+        '    if interact_pressed:\n'
         '        _perform_interaction()\n'
-        '    elif InputMap.has_action("pause") and event.is_action_pressed("pause"):\n'
+        '    elif pause_pressed:\n'
         '        pause_panel.visible = not pause_panel.visible\n'
     )
     replace_once(path, old_unhandled, new_unhandled)
@@ -119,4 +125,4 @@ apply_text = apply_path.read_text(encoding="utf-8")
 apply_text = apply_text.replace("0.05.0-WP03", "0.05.1-WP03R")
 apply_path.write_text(apply_text, encoding="utf-8")
 
-print("WP-03R input fallback, touch-menu, regression, and build-version repairs applied.")
+print("WP-03R input fallback, touch-menu, controller-action fallback, regression, and build-version repairs applied.")
