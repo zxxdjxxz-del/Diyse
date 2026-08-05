@@ -1,0 +1,30 @@
+name: Verify Frozen WP-02R Source
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/bootstrap-wp02-source.yml"
+      - "ci/godot-v0.02/wp02/WP02R_SOURCE_FROZEN.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-source-freeze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Check out WP-02R branch
+        uses: actions/checkout@v4
+
+      - name: Verify published-source freeze
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f ci/godot-v0.02/wp02/WP02R_SOURCE_FROZEN.md
+          grep -Fq 'v0.04.1-WP02R' ci/godot-v0.02/wp02/WP02R_SOURCE_FROZEN.md
+          test -f ci/godot-v0.02/wp02/save_foundation.gd
+          test -f ci/godot-v0.02/wp02/wp02_save_regression_test.gd
+          echo 'WP-02R source freeze: PASS'
