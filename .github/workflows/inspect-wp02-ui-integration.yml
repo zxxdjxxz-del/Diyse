@@ -25,12 +25,12 @@ jobs:
         run: |
           set -euo pipefail
           cat ci/godot-v0.02/project.part.*.b64 | base64 --decode > /tmp/godot-v0.02.zip
-          unzip -qq -o /tmp/godot-v0.02.zip
+          unzip -qq -o /tmp/godot-v0.02.zip || true
           test -f "${PROJECT_DIR}/src/autoload/save_manager.gd"
           test -f "${PROJECT_DIR}/src/scenes/title.gd"
           test -f "${PROJECT_DIR}/src/scenes/ruin_scene.gd"
           test -f "${PROJECT_DIR}/src/scenes/battle_scene.gd"
-          mkdir -p inspection/src/autoload inspection/src/scenes
+          mkdir -p inspection/src/autoload inspection/src/scenes inspection/repairs inspection/wp02
           cp "${PROJECT_DIR}/src/autoload/save_manager.gd" inspection/src/autoload/
           cp "${PROJECT_DIR}/src/autoload/game_state.gd" inspection/src/autoload/
           cp "${PROJECT_DIR}/src/scenes/title.gd" inspection/src/scenes/
@@ -39,8 +39,11 @@ jobs:
           cp "${PROJECT_DIR}/src/scenes/ruin_scene.tscn" inspection/src/scenes/
           cp "${PROJECT_DIR}/src/scenes/battle_scene.gd" inspection/src/scenes/
           cp "${PROJECT_DIR}/src/scenes/battle_scene.tscn" inspection/src/scenes/
-          cp ci/godot-v0.02/repairs/apply_battle_ui_v0025.py inspection/
-          cp ci/godot-v0.02/repairs/apply_battle_polish.py inspection/
+          cp ci/godot-v0.02/repairs/apply_battle_ui_v0025.py inspection/repairs/
+          cp ci/godot-v0.02/repairs/apply_battle_polish.py inspection/repairs/
+          cp ci/godot-v0.02/repairs/battle_ui_v0025_test.gd inspection/repairs/
+          cp ci/godot-v0.02/wp02/run_wp02_ci.sh inspection/wp02/
+          cp ci/godot-v0.02/wp02/apply_wp02.py inspection/wp02/
           find inspection -type f -print -exec sha256sum {} \;
 
       - name: Upload inspection source
