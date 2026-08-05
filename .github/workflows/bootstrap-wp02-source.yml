@@ -34,6 +34,7 @@ jobs:
         run: |
           set -euo pipefail
           cat ci/godot-v0.02/wp02-transport/payload.part.* | base64 --decode > /tmp/wp02-source.tar.xz
+          sha256sum /tmp/wp02-source.tar.xz
           echo "${PAYLOAD_SHA256}  /tmp/wp02-source.tar.xz" | sha256sum --check --strict
           tar -tJf /tmp/wp02-source.tar.xz
           tar -xJf /tmp/wp02-source.tar.xz
