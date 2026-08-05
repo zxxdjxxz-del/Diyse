@@ -30,7 +30,15 @@ jobs:
         run: |
           set -euo pipefail
           cat ci/godot-v0.02/project.part.*.b64 | base64 --decode > /tmp/godot-v0.02.zip
-          unzip -qq -o /tmp/godot-v0.02.zip
+          unzip -qq -o /tmp/godot-v0.02.zip || true
+          test -f "${PROJECT_DIR}/src/autoload/save_manager.gd"
+          test -f "${PROJECT_DIR}/src/autoload/game_state.gd"
+          test -f "${PROJECT_DIR}/src/scenes/title.gd"
+          test -f "${PROJECT_DIR}/src/scenes/title.tscn"
+          test -f "${PROJECT_DIR}/src/scenes/ruin_scene.gd"
+          test -f "${PROJECT_DIR}/src/scenes/ruin_scene.tscn"
+          test -f "${PROJECT_DIR}/src/scenes/battle_scene.gd"
+          test -f "${PROJECT_DIR}/src/scenes/battle_scene.tscn"
           mkdir -p inspection/src/autoload inspection/src/scenes inspection/repairs
           cp "${PROJECT_DIR}/src/autoload/save_manager.gd" inspection/src/autoload/
           cp "${PROJECT_DIR}/src/autoload/game_state.gd" inspection/src/autoload/
