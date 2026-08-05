@@ -1,80 +1,30 @@
-name: Bootstrap WP-02 Source Package
+name: Verify Frozen WP-02R Source
 
 on:
   pull_request:
     paths:
       - ".github/workflows/bootstrap-wp02-source.yml"
-      - "ci/godot-v0.02/wp02-transport/**"
-      - "ci/godot-v0.02/wp02/fix_save_hash_canonicalization.py"
+      - "ci/godot-v0.02/wp02/WP02R_SOURCE_FROZEN.md"
   workflow_dispatch:
 
 permissions:
-  contents: write
-
-concurrency:
-  group: bootstrap-wp02-source
-  cancel-in-progress: false
+  contents: read
 
 jobs:
-  publish-source:
+  verify-source-freeze:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-    env:
-      TARGET_BRANCH: "agent/godot-wp02"
-      PAYLOAD_SHA256: "4f86a36ce81a96e40ab8b8d37dcec616c19ccad55de4644e395d75f1adca67b6"
+    timeout-minutes: 5
 
     steps:
-      - name: Check out WP-02 branch
+      - name: Check out WP-02R branch
         uses: actions/checkout@v4
-        with:
-          ref: agent/godot-wp02
-          fetch-depth: 0
 
-      - name: Reconstruct, repair, and verify source package
+      - name: Verify published-source freeze
         shell: bash
         run: |
           set -euo pipefail
-          cat ci/godot-v0.02/wp02-transport/payload.part.* | base64 --decode > /tmp/wp02-source.tar.xz
-          echo "${PAYLOAD_SHA256}  /tmp/wp02-source.tar.xz" | sha256sum --check --strict
-          tar -tJf /tmp/wp02-source.tar.xz
-          tar -xJf /tmp/wp02-source.tar.xz
+          test -f ci/godot-v0.02/wp02/WP02R_SOURCE_FROZEN.md
+          grep -Fq 'v0.04.1-WP02R' ci/godot-v0.02/wp02/WP02R_SOURCE_FROZEN.md
           test -f ci/godot-v0.02/wp02/save_foundation.gd
           test -f ci/godot-v0.02/wp02/wp02_save_regression_test.gd
-          test -f ci/godot-v0.02/wp02/run_wp02_ci.sh
-          test -f ci/godot-v0.02/wp02/fix_save_hash_canonicalization.py
-          python ci/godot-v0.02/wp02/fix_save_hash_canonicalization.py
-          grep -F 'var canonical = JSON.parse_string(serialized)' ci/godot-v0.02/wp02/save_foundation.gd
-          python - <<'PY'
-          from pathlib import Path
-          text = Path('ci/godot-v0.02/wp02/wp02_save_regression_test.gd').read_text(encoding='utf-8')
-          start = text.index('func _test_interrupted_write_is_ignored() -> void:\n')
-          end = text.find('\nfunc ', start + 1)
-          segment = text[start:] if end < 0 else text[start:end]
-          required = (
-              'var before: Dictionary = manager.load_game("slot_a")',
-              'var interruption: Dictionary = manager.simulate_interrupted_write_for_test',
-              'var loaded: Dictionary = manager.load_game("slot_a")',
-          )
-          missing = [line for line in required if line not in segment]
-          if missing:
-              raise SystemExit('Missing typed interrupted-write regression lines: ' + ', '.join(missing))
-          print('WP-02 interrupted-write regression typing: PASS')
-          PY
-          python ci/godot-v0.02/wp02/validate_wp02_contract.py ci/godot-v0.02/wp02
-          ! find ci/godot-v0.02/wp02 -type d -name __pycache__ -print -quit | grep -q .
-          ! find ci/godot-v0.02/wp02 -type f -name '*.pyc' -print -quit | grep -q .
-
-      - name: Commit reconstructed WP-02 source
-        shell: bash
-        run: |
-          set -euo pipefail
-          git config user.name "Diyse WP-02 Source Publication"
-          git config user.email "actions@users.noreply.github.com"
-          git add ci/godot-v0.02/wp02
-          if git diff --cached --quiet; then
-            echo "Verified WP-02 source is already published; nothing to commit."
-            exit 0
-          fi
-          ! git diff --cached --name-only | grep -E '(^|/)__pycache__/|\.pyc$'
-          git commit -m "Apply verified WP-02 source repairs"
-          git push origin HEAD:refs/heads/${TARGET_BRANCH}
+          echo 'WP-02R source freeze: PASS'
