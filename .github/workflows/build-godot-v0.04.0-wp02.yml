@@ -15,6 +15,42 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  inspect-ui-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PROJECT_DIR: "The_Role_of_the_Diyse_Godot_Prototype_v0.02"
+
+    steps:
+      - name: Check out QA branch
+        uses: actions/checkout@v4
+
+      - name: Reconstruct UI source
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat ci/godot-v0.02/project.part.*.b64 | base64 --decode > /tmp/godot-v0.02.zip
+          unzip -qq -o /tmp/godot-v0.02.zip
+          mkdir -p inspection/src/autoload inspection/src/scenes inspection/repairs
+          cp "${PROJECT_DIR}/src/autoload/save_manager.gd" inspection/src/autoload/
+          cp "${PROJECT_DIR}/src/autoload/game_state.gd" inspection/src/autoload/
+          cp "${PROJECT_DIR}/src/scenes/title.gd" inspection/src/scenes/
+          cp "${PROJECT_DIR}/src/scenes/title.tscn" inspection/src/scenes/
+          cp "${PROJECT_DIR}/src/scenes/ruin_scene.gd" inspection/src/scenes/
+          cp "${PROJECT_DIR}/src/scenes/ruin_scene.tscn" inspection/src/scenes/
+          cp "${PROJECT_DIR}/src/scenes/battle_scene.gd" inspection/src/scenes/
+          cp "${PROJECT_DIR}/src/scenes/battle_scene.tscn" inspection/src/scenes/
+          cp ci/godot-v0.02/repairs/apply_battle_ui_v0025.py inspection/repairs/
+          cp ci/godot-v0.02/repairs/apply_battle_polish.py inspection/repairs/
+
+      - name: Upload UI integration source
+        uses: actions/upload-artifact@v4
+        with:
+          name: WP02-UI-Integration-Inspection-Source
+          path: inspection/
+          if-no-files-found: error
+          retention-days: 3
+
   build-runtime-verified-apk:
     runs-on: ubuntu-latest
     timeout-minutes: 60
