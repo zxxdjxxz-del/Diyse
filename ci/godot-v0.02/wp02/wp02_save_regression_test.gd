@@ -67,7 +67,7 @@ func _test_interrupted_write_is_ignored() -> void:
     var before: Dictionary = manager.load_game("slot_a")
     var interruption: Dictionary = manager.simulate_interrupted_write_for_test("slot_a", {"chapter": 99})
     _expect(bool(interruption.get("ok", false)), "Could not create interrupted-write fixture.")
-    var loaded := manager.load_game("slot_a")
+    var loaded: Dictionary = manager.load_game("slot_a")
     _expect(bool(loaded.get("ok", false)), "Load failed after interrupted write.")
     _expect(Dictionary(loaded.get("payload", {})) == Dictionary(before.get("payload", {})), "Interrupted pending data replaced verified primary.")
     var paths: Dictionary = manager.inspect_slot("slot_a")
