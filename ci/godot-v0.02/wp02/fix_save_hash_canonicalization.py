@@ -1,22 +1,45 @@
 #!/usr/bin/env python3
 from pathlib import Path
 
-path = Path(__file__).with_name("save_foundation.gd")
-text = path.read_text(encoding="utf-8")
-old = '''func _sha256_variant(value) -> String:
+root = Path(__file__).parent
+
+save_path = root / "save_foundation.gd"
+save_text = save_path.read_text(encoding="utf-8")
+old_hash = '''func _sha256_variant(value) -> String:
     return _sha256_text(JSON.stringify(value, "", true))
 '''
-new = '''func _sha256_variant(value) -> String:
+new_hash = '''func _sha256_variant(value) -> String:
     # Godot JSON parses every number as a float. Hash the canonical JSON
     # round-trip so an in-memory integer and its persisted numeric form agree.
     var serialized := JSON.stringify(value, "", true)
     var canonical = JSON.parse_string(serialized)
     return _sha256_text(JSON.stringify(canonical, "", true))
 '''
-if new in text:
+if new_hash in save_text:
     print("WP-02 canonical save hashing is already installed.")
-elif old in text:
-    path.write_text(text.replace(old, new, 1), encoding="utf-8")
+elif old_hash in save_text:
+    save_path.write_text(save_text.replace(old_hash, new_hash, 1), encoding="utf-8")
     print("Installed WP-02 canonical save hashing.")
 else:
     raise SystemExit("Expected _sha256_variant implementation was not found.")
+
+test_path = root / "wp02_save_regression_test.gd"
+test_text = test_path.read_text(encoding="utf-8")
+replacements = {
+    '    var before := manager.load_game("slot_a")\n': '    var before: Dictionary = manager.load_game("slot_a")\n',
+    '    var interruption := manager.simulate_interrupted_write_for_test("slot_a", {"chapter": 99})\n': '    var interruption: Dictionary = manager.simulate_interrupted_write_for_test("slot_a", {"chapter": 99})\n',
+    '    var loaded := manager.load_game("slot_a")\n': '    var loaded: Dictionary = manager.load_game("slot_a")\n',
+}
+changed = False
+for old, new in replacements.items():
+    if new in test_text:
+        continue
+    if old not in test_text:
+        raise SystemExit(f"Expected regression-test line was not found: {old.strip()}")
+    test_text = test_text.replace(old, new, 1)
+    changed = True
+if changed:
+    test_path.write_text(test_text, encoding="utf-8")
+    print("Installed WP-02 Godot 4.7 regression-test typing fixes.")
+else:
+    print("WP-02 regression-test typing fixes are already installed.")
