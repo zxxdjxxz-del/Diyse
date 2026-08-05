@@ -3,7 +3,7 @@ set -euo pipefail
 
 : "${GODOT_VERSION:=4.7.1}"
 : "${PROJECT_DIR:=The_Role_of_the_Diyse_Godot_Prototype_v0.02}"
-: "${WP03_APK_NAME:=The_Role_of_the_Diyse_v0.05.0_WP03_QA.apk}"
+: "${WP03_APK_NAME:=The_Role_of_the_Diyse_v0.05.1_WP03R_QA.apk}"
 
 WP03_TRANSPORT_DIR="ci/godot-v0.02/wp03/source"
 WP03_SOURCE_SHA256="0a20d960b9ed5887ce5ecc3be58e1495355e5744c70b518adae747af16621a99"
@@ -15,8 +15,13 @@ cat "${WP03_TRANSPORT_DIR}"/source.part.* | base64 --decode > /tmp/wp03-source.t
 echo "${WP03_SOURCE_SHA256}  /tmp/wp03-source.tar.xz" | sha256sum --check --strict
 rm -rf "${WP03_DIR}"
 tar -xJf /tmp/wp03-source.tar.xz -C /tmp
+python ci/godot-v0.02/wp03/apply_wp03r_input_fix.py "${WP03_DIR}"
 python "${WP03_DIR}/validate_wp03_contract.py" "${WP03_DIR}" | tee wp03-contract-validation.log
 grep -Fq "WP-03 CONTRACT VALIDATION: PASS" wp03-contract-validation.log
+grep -Fq 'func _desktop_input() -> Vector2:' "${WP03_DIR}/ruin_scene_wp03.gd"
+grep -Fq 'func _desktop_input() -> Vector2:' "${WP03_DIR}/traversal_annex_scene.gd"
+grep -Fq 'menu_button.text = "Menu"' "${WP03_DIR}/traversal_annex_scene.gd"
+grep -Fq 'Annex touch Menu button is missing.' "${WP03_DIR}/wp03_traversal_regression_test.gd"
 
 printf '\n=== Reconstruct and verify approved WP-02R baseline ===\n'
 APK_NAME="${BASELINE_APK_NAME}" source ci/godot-v0.02/wp02/run_wp02_ci.sh
@@ -37,8 +42,8 @@ cp "${WP03_DIR}/wp03_traversal_regression_test.gd" "${PROJECT_DIR}/tests/wp03_tr
 cp "${WP03_DIR}/wp03_traversal_regression_test.tscn" "${PROJECT_DIR}/tests/wp03_traversal_regression_test.tscn"
 python "${WP03_DIR}/apply_wp03.py" "${PROJECT_DIR}"
 
-grep -Fqx 'const BUILD_VERSION := "0.05.0-WP03"' "${PROJECT_DIR}/src/autoload/build_identity.gd"
-grep -Fqx 'version/name="0.05.0-WP03"' "${PROJECT_DIR}/export_presets.cfg"
+grep -Fqx 'const BUILD_VERSION := "0.05.1-WP03R"' "${PROJECT_DIR}/src/autoload/build_identity.gd"
+grep -Fqx 'version/name="0.05.1-WP03R"' "${PROJECT_DIR}/export_presets.cfg"
 grep -Fq 'DiyseTraversalFoundation.camera_relative_direction' "${PROJECT_DIR}/src/scenes/ruin_scene.gd"
 grep -Fq 'DiyseTraversalFoundation.wall_slide' "${PROJECT_DIR}/src/scenes/ruin_scene.gd"
 grep -Fq 'GameState.world["camera_zone"]' "${PROJECT_DIR}/src/scenes/ruin_scene.gd"
@@ -51,7 +56,10 @@ set +e
 WP03_IMPORT_STATUS=${PIPESTATUS[0]}
 set -e
 test "${WP03_IMPORT_STATUS}" -eq 0
-! grep -E "SCRIPT ERROR|Parse Error|Compile Error|ERROR: Failed to load script" godot-wp03-import.log
+if grep -E "SCRIPT ERROR|Parse Error|Compile Error|ERROR: Failed to load script" godot-wp03-import.log; then
+  echo "WP-03R import produced a script load failure." >&2
+  exit 1
+fi
 
 printf '\n=== Run WP-03 traversal runtime regression ===\n'
 set +e
@@ -60,7 +68,10 @@ WP03_STATUS=${PIPESTATUS[0]}
 set -e
 test "${WP03_STATUS}" -eq 0
 grep -Fq "PASS: WP-03 traversal movement, camera continuity, collision safety, occlusion, transition, and save restoration gates passed." wp03-traversal-runtime.log
-! grep -E "SCRIPT ERROR|Parse Error|Compile Error|WP-03 TRAVERSAL TEST FAILED|Invalid call|Invalid assignment|Invalid access|ERROR:" wp03-traversal-runtime.log
+if grep -E "SCRIPT ERROR|Parse Error|Compile Error|WP-03 TRAVERSAL TEST FAILED|Invalid call|Invalid assignment|Invalid access|The InputMap action|ERROR:" wp03-traversal-runtime.log; then
+  echo "WP-03R traversal runtime produced an unexpected error." >&2
+  exit 1
+fi
 
 printf '\n=== Re-run approved WP-02R device-path save regression ===\n'
 set +e
@@ -69,7 +80,10 @@ WP02R_SAVE_STATUS=${PIPESTATUS[0]}
 set -e
 test "${WP02R_SAVE_STATUS}" -eq 0
 grep -Fq "PASS: WP-02 device-path SaveManager, Continue, backup recovery, and title integration are operational." wp03-wp02r-save-regression.log
-! grep -E "SCRIPT ERROR|Parse Error|Compile Error|WP-02 UI SAVE INTEGRATION FAILED|ERROR:" wp03-wp02r-save-regression.log
+if grep -E "SCRIPT ERROR|Parse Error|Compile Error|WP-02 UI SAVE INTEGRATION FAILED|Invalid call|Invalid assignment|Invalid access" wp03-wp02r-save-regression.log; then
+  echo "WP-03R inherited save regression produced an unexpected script error." >&2
+  exit 1
+fi
 
 printf '\n=== Re-run no-frame battle regression ===\n'
 set +e
@@ -78,22 +92,25 @@ WP03_BATTLE_UI_STATUS=${PIPESTATUS[0]}
 set -e
 test "${WP03_BATTLE_UI_STATUS}" -eq 0
 grep -Fq "PASS: compact fixed round controls instantiate without the custom outer battle frame." wp03-battle-ui-regression.log
-! grep -E "SCRIPT ERROR|Parse Error|Compile Error|BATTLE UI TEST FAILED|ERROR:" wp03-battle-ui-regression.log
+if grep -E "SCRIPT ERROR|Parse Error|Compile Error|BATTLE UI TEST FAILED|Invalid call|Invalid assignment|Invalid access|ERROR:" wp03-battle-ui-regression.log; then
+  echo "WP-03R battle UI regression produced an unexpected error." >&2
+  exit 1
+fi
 
 printf '\n=== Configure WP-03 QA signing ===\n'
-WP03_KEYSTORE="${RUNNER_TEMP}/diyse-v0.05.0-wp03-qa.keystore"
+WP03_KEYSTORE="${RUNNER_TEMP}/diyse-v0.05.1-wp03r-qa.keystore"
 keytool -genkeypair \
   -keystore "${WP03_KEYSTORE}" \
-  -storepass diyse-v0050-wp03-qa \
-  -alias diyse-v0050-wp03-qa \
-  -keypass diyse-v0050-wp03-qa \
+  -storepass diyse-v0051-wp03r-qa \
+  -alias diyse-v0051-wp03r-qa \
+  -keypass diyse-v0051-wp03r-qa \
   -keyalg RSA \
   -keysize 2048 \
   -validity 3650 \
-  -dname "CN=The Role of the Diyse WP-03 QA,O=Diyse Prototype,C=US"
+  -dname "CN=The Role of the Diyse WP-03R QA,O=Diyse Prototype,C=US"
 export GODOT_ANDROID_KEYSTORE_DEBUG_PATH="${WP03_KEYSTORE}"
-export GODOT_ANDROID_KEYSTORE_DEBUG_USER="diyse-v0050-wp03-qa"
-export GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD="diyse-v0050-wp03-qa"
+export GODOT_ANDROID_KEYSTORE_DEBUG_USER="diyse-v0051-wp03r-qa"
+export GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD="diyse-v0051-wp03r-qa"
 
 printf '\n=== Export and verify WP-03 Android APK ===\n'
 rm -rf android-artifact
@@ -117,7 +134,10 @@ unzip -l "${WP03_APK}" | grep -Fq "assets/src/autoload/save_manager.gdc"
 unzip -l "${WP03_APK}" | grep -Fq "assets/src/core/traversal_foundation.gdc"
 unzip -l "${WP03_APK}" | grep -Fq "assets/src/scenes/traversal_annex_scene.gdc"
 unzip -l "${WP03_APK}" | grep -Fq "assets/src/scenes/ruin_scene.gdc"
-! unzip -l "${WP03_APK}" | grep -Fq "diyse_battle_outer_frame"
+if unzip -l "${WP03_APK}" | grep -Fq "diyse_battle_outer_frame"; then
+  echo "Removed custom battle-frame asset is present in the WP-03R APK." >&2
+  exit 1
+fi
 "${ANDROID_HOME}/build-tools/35.0.1/apksigner" verify --verbose --print-certs "${WP03_APK}" | tee wp03-apk-signature.txt
 sha256sum "${WP03_APK}" | tee "${WP03_APK}.sha256"
 
@@ -139,4 +159,4 @@ cp \
   battle-ui-test.log \
   android-artifact/
 
-printf '\nWP-03 TRAVERSAL CI BUILD: PASS\n'
+printf '\nWP-03R TRAVERSAL CI BUILD: PASS\n'
