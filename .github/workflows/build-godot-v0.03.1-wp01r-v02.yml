@@ -1,0 +1,282 @@
+name: Build Godot v0.03.1 WP-01R Runtime-Verified APK
+
+on:
+  pull_request:
+    paths:
+      - "ci/godot-v0.02/**"
+      - ".github/workflows/build-godot-v0.03.1-wp01r-v02.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: godot-v0.03.1-wp01r-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-runtime-verified-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    env:
+      GODOT_VERSION: "4.7.1"
+      PROJECT_DIR: "The_Role_of_the_Diyse_Godot_Prototype_v0.02"
+      APK_NAME: "The_Role_of_the_Diyse_v0.03.1_WP01R_QA.apk"
+      SIMULATOR_SHA256: "ca6cdb5aa2fa65031dd4d41bc53ce2f3a55c7bb1c50b8ca08da3ea23d893c59a"
+      BATTLE_SCENE_SHA256: "f9a391784df0bd24afa2e9d0ad1ee5739827e4c6d25a131fc80ebd519c977ea8"
+      AUTHORITY_ZIP_SHA256: "89bb3e75aa2658471bf1a092901fb69adcc1dd44059db8d1a96685e8f305fc19"
+
+    steps:
+      - name: Check out QA branch
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android export packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager \
+            "platform-tools" \
+            "build-tools;35.0.1" \
+            "platforms;android-35" \
+            "cmake;3.10.2.4988404" \
+            "ndk;28.1.13356709"
+
+      - name: Reconstruct and verify v0.02.5 project sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat ci/godot-v0.02/project.part.*.b64 | base64 --decode > /tmp/godot-v0.02.zip
+          unzip -qq -o /tmp/godot-v0.02.zip || true
+          test -f "${PROJECT_DIR}/project.godot"
+
+          echo "${SIMULATOR_SHA256}  ci/godot-v0.02/repairs/battle_simulator.gd" | sha256sum --check --strict
+          mkdir -p "${PROJECT_DIR}/src/core"
+          cp ci/godot-v0.02/repairs/battle_simulator.gd "${PROJECT_DIR}/src/core/battle_simulator.gd"
+
+          (
+            cd "${PROJECT_DIR}"
+            grep -v 'src/core/battle_simulator.gd$' SOURCE_MANIFEST.sha256 | sha256sum --strict -c -
+          )
+          echo "${SIMULATOR_SHA256}  ${PROJECT_DIR}/src/core/battle_simulator.gd" | sha256sum --check --strict
+          python "${PROJECT_DIR}/tools/validate_project.py"
+          python "${PROJECT_DIR}/tests/reference_battle_test.py"
+
+      - name: Apply v0.02.5 compatibility and battle repairs
+        shell: bash
+        run: |
+          set -euo pipefail
+          JOYSTICK="${PROJECT_DIR}/src/ui/virtual_joystick.gd"
+          RUIN="${PROJECT_DIR}/src/scenes/ruin_scene.gd"
+          BATTLE="${PROJECT_DIR}/src/scenes/battle_scene.gd"
+          PROJECT_SETTINGS="${PROJECT_DIR}/project.godot"
+
+          sed -i 's/^class_name VirtualJoystick$/class_name DiyseVirtualJoystick/' "${JOYSTICK}"
+          sed -i 's/VirtualJoystick/DiyseVirtualJoystick/g' "${RUIN}"
+          ! grep -RInw --include='*.gd' 'VirtualJoystick' "${PROJECT_DIR}/src"
+
+          if grep -q '^textures/vram_compression/import_etc2_astc=' "${PROJECT_SETTINGS}"; then
+            sed -i 's|^textures/vram_compression/import_etc2_astc=.*$|textures/vram_compression/import_etc2_astc=true|' "${PROJECT_SETTINGS}"
+          else
+            sed -i '/^\[rendering\]$/a textures/vram_compression/import_etc2_astc=true' "${PROJECT_SETTINGS}"
+          fi
+
+          python ci/godot-v0.02/repairs/apply_qa_fixes.py "${PROJECT_DIR}"
+          cat ci/godot-v0.02/repairs/battle_scene.part.* > "${BATTLE}"
+          echo "${BATTLE_SCENE_SHA256}  ${BATTLE}" | sha256sum --check --strict
+          python ci/godot-v0.02/repairs/apply_battle_polish.py "${PROJECT_DIR}"
+
+      - name: Apply v0.02.5 compact ornate battle UI
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "${PROJECT_DIR}/assets/ui" "${PROJECT_DIR}/tests"
+          cp ci/godot-v0.02/assets/diyse_battle_outer_frame.svg "${PROJECT_DIR}/assets/ui/diyse_battle_outer_frame.svg"
+          cp ci/godot-v0.02/repairs/battle_polish_test.gd "${PROJECT_DIR}/tests/battle_polish_test.gd"
+          cp ci/godot-v0.02/repairs/battle_polish_test.tscn "${PROJECT_DIR}/tests/battle_polish_test.tscn"
+          cp ci/godot-v0.02/repairs/battle_ui_v0025_test.gd "${PROJECT_DIR}/tests/battle_ui_v0025_test.gd"
+          cp ci/godot-v0.02/repairs/battle_ui_v0025_test.tscn "${PROJECT_DIR}/tests/battle_ui_v0025_test.tscn"
+          python ci/godot-v0.02/repairs/apply_battle_ui_v0025.py "${PROJECT_DIR}"
+
+          grep -Fq 'confirm_button.text = "RESOLVE ROUND"' "${PROJECT_DIR}/src/scenes/battle_scene.gd"
+          grep -Fq 'edit_plan_button.text = "EDIT PLAN"' "${PROJECT_DIR}/src/scenes/battle_scene.gd"
+          grep -Fq 'frame.draw_center = false' "${PROJECT_DIR}/src/scenes/battle_scene.gd"
+          grep -Fq 'plan_label.max_lines_visible = 2' "${PROJECT_DIR}/src/scenes/battle_scene.gd"
+
+      - name: Reconstruct and validate v1.12 authority bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          WP01R_DIR="ci/godot-v0.02/wp01r"
+          cat "${WP01R_DIR}"/authority.part.*.b64 | base64 --decode > /tmp/diyse-authority-v1.12.zip
+          echo "${AUTHORITY_ZIP_SHA256}  /tmp/diyse-authority-v1.12.zip" | sha256sum --check --strict
+          rm -rf /tmp/diyse-authority-v1.12
+          mkdir -p /tmp/diyse-authority-v1.12
+          unzip -q /tmp/diyse-authority-v1.12.zip -d /tmp/diyse-authority-v1.12
+          python "${WP01R_DIR}/validate_wp01r_authority.py" /tmp/diyse-authority-v1.12 | tee wp01r-authority-python.log
+          grep -Fq "WP-01R VALIDATION: PASS" wp01r-authority-python.log
+
+      - name: Apply WP-01R Godot authority integration
+        shell: bash
+        run: |
+          set -euo pipefail
+          WP01R_DIR="ci/godot-v0.02/wp01r"
+          mkdir -p \
+            "${PROJECT_DIR}/assets/authority/v1_12" \
+            "${PROJECT_DIR}/src/autoload" \
+            "${PROJECT_DIR}/tests"
+          cp -a /tmp/diyse-authority-v1.12/. "${PROJECT_DIR}/assets/authority/v1_12/"
+          cp "${WP01R_DIR}/authority_manager.gd" "${PROJECT_DIR}/src/autoload/authority_manager.gd"
+          cp "${WP01R_DIR}/authority_smoke_test.gd" "${PROJECT_DIR}/tests/authority_smoke_test.gd"
+          cp "${WP01R_DIR}/authority_smoke_test.tscn" "${PROJECT_DIR}/tests/authority_smoke_test.tscn"
+          python "${WP01R_DIR}/apply_wp01r.py" "${PROJECT_DIR}"
+          python "${WP01R_DIR}/validate_wp01r_authority.py" "${PROJECT_DIR}/assets/authority/v1_12" | tee wp01r-installed-authority.log
+
+          grep -Fqx 'const BUILD_VERSION := "0.03.1-WP01R"' "${PROJECT_DIR}/src/autoload/build_identity.gd"
+          grep -Fqx 'version/name="0.03.1-WP01R"' "${PROJECT_DIR}/export_presets.cfg"
+          grep -Fq 'AuthorityManager="*res://src/autoload/authority_manager.gd"' "${PROJECT_DIR}/project.godot"
+          test -f "${PROJECT_DIR}/assets/authority/v1_12/bundle_manifest.json"
+          test -f "${PROJECT_DIR}/assets/authority/v1_12/indexes/master_identity_index.json"
+
+      - name: Install Godot 4.7.1 and export templates
+        shell: bash
+        run: |
+          set -euo pipefail
+          GODOT_ROOT="${RUNNER_TEMP}/godot"
+          TEMPLATE_ROOT="${HOME}/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
+          mkdir -p "${GODOT_ROOT}" "${TEMPLATE_ROOT}"
+
+          curl --fail --location --retry 4 --retry-delay 3 \
+            --output /tmp/godot.zip \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          unzip -q /tmp/godot.zip -d "${GODOT_ROOT}"
+          mv "${GODOT_ROOT}/Godot_v${GODOT_VERSION}-stable_linux.x86_64" "${GODOT_ROOT}/godot"
+          chmod +x "${GODOT_ROOT}/godot"
+
+          curl --fail --location --retry 4 --retry-delay 3 \
+            --output /tmp/templates.tpz \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          unzip -q /tmp/templates.tpz -d /tmp/godot-templates
+          cp -a /tmp/godot-templates/templates/. "${TEMPLATE_ROOT}/"
+
+          echo "GODOT_BIN=${GODOT_ROOT}/godot" >> "${GITHUB_ENV}"
+          "${GODOT_ROOT}/godot" --version
+          test -f "${TEMPLATE_ROOT}/android_debug.apk"
+
+      - name: Configure QA signing and Android paths
+        shell: bash
+        run: |
+          set -euo pipefail
+          KEYSTORE="${RUNNER_TEMP}/diyse-v0.03.1-wp01r-qa.keystore"
+          keytool -genkeypair \
+            -keystore "${KEYSTORE}" \
+            -storepass diyse-v0030-wp01r-qa \
+            -alias diyse-v0030-wp01r-qa \
+            -keypass diyse-v0030-wp01r-qa \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 3650 \
+            -dname "CN=The Role of the Diyse WP-01R QA,O=Diyse Prototype,C=US"
+
+          echo "GODOT_ANDROID_KEYSTORE_DEBUG_PATH=${KEYSTORE}" >> "${GITHUB_ENV}"
+          echo "GODOT_ANDROID_KEYSTORE_DEBUG_USER=diyse-v0030-wp01r-qa" >> "${GITHUB_ENV}"
+          echo "GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD=diyse-v0030-wp01r-qa" >> "${GITHUB_ENV}"
+
+          mkdir -p "${HOME}/.config/godot"
+          "${GODOT_BIN}" --headless --editor --path "${PROJECT_DIR}" --quit-after 2 || true
+          SETTINGS_FILE="$(find "${HOME}/.config/godot" -maxdepth 1 -type f -name 'editor_settings-4*.tres' | head -n 1)"
+          if [[ -z "${SETTINGS_FILE}" ]]; then
+            SETTINGS_FILE="${HOME}/.config/godot/editor_settings-4.tres"
+            printf '[gd_resource type="EditorSettings" format=3]\n\n[resource]\n' > "${SETTINGS_FILE}"
+          fi
+          printf '\nexport/android/android_sdk_path = "%s"\n' "${ANDROID_HOME}" >> "${SETTINGS_FILE}"
+          printf 'export/android/java_sdk_path = "%s"\n' "${JAVA_HOME}" >> "${SETTINGS_FILE}"
+          printf 'export/android/shutdown_adb_on_exit = false\n' >> "${SETTINGS_FILE}"
+
+      - name: Import and compile project
+        shell: bash
+        run: |
+          set -o pipefail
+          "${GODOT_BIN}" --headless --editor --path "${PROJECT_DIR}" --import --quit-after 60 --verbose 2>&1 | tee godot-import.log
+          ! grep -E "SCRIPT ERROR|Parse Error|Compile Error|ERROR: Failed to load script" godot-import.log
+
+      - name: Run WP-01R authority runtime smoke test
+        shell: bash
+        run: |
+          set -o pipefail
+          "${GODOT_BIN}" --headless --path "${PROJECT_DIR}" --quit-after 240 --verbose res://tests/authority_smoke_test.tscn 2>&1 | tee authority-runtime.log
+          grep -Fq "PASS: WP-01R authority bundle loaded, verified, and enforced in Godot." authority-runtime.log
+          ! grep -E "SCRIPT ERROR|Parse Error|Compile Error|WP-01R AUTHORITY TEST FAILED|DIYSE AUTHORITY FAILURE|ERROR:" authority-runtime.log
+
+      - name: Run battle scene runtime smoke test
+        shell: bash
+        run: |
+          set -o pipefail
+          "${GODOT_BIN}" --headless --path "${PROJECT_DIR}" --quit-after 180 --verbose res://src/scenes/battle_scene.tscn 2>&1 | tee battle-runtime.log
+          grep -Fq "DIYSE AUTHORITY READY: registries=75 records=7800 canonical_ids=2098" battle-runtime.log
+          ! grep -E "SCRIPT ERROR|Parse Error|Compile Error|Invalid call|Invalid assignment|Invalid access|DIYSE AUTHORITY FAILURE|ERROR:" battle-runtime.log
+
+      - name: Run battle behavior regression test
+        shell: bash
+        run: |
+          set -o pipefail
+          "${GODOT_BIN}" --headless --path "${PROJECT_DIR}" --quit-after 180 --verbose res://tests/battle_polish_test.tscn 2>&1 | tee battle-polish-test.log
+          grep -Fq "PASS: dead-target retargeting and touch ability scrolling are operational." battle-polish-test.log
+          ! grep -E "SCRIPT ERROR|Parse Error|Compile Error|Invalid call|Invalid assignment|Invalid access|DIYSE AUTHORITY FAILURE|ERROR:" battle-polish-test.log
+
+      - name: Run compact ornate UI regression test
+        shell: bash
+        run: |
+          set -o pipefail
+          "${GODOT_BIN}" --headless --path "${PROJECT_DIR}" --quit-after 180 --verbose res://tests/battle_ui_v0025_test.tscn 2>&1 | tee battle-ui-test.log
+          grep -Fq "PASS: compact fixed round controls and restrained ornate battle trim instantiated correctly." battle-ui-test.log
+          ! grep -E "SCRIPT ERROR|Parse Error|Compile Error|Invalid call|Invalid assignment|Invalid access|DIYSE AUTHORITY FAILURE|ERROR:" battle-ui-test.log
+
+      - name: Export and verify signed WP-01R QA APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "${PROJECT_DIR}/build/android" android-artifact
+          "${GODOT_BIN}" \
+            --headless \
+            --path "${PROJECT_DIR}" \
+            --export-debug "Android QA" \
+            "${GITHUB_WORKSPACE}/${PROJECT_DIR}/build/android/${APK_NAME}" \
+            --verbose 2>&1 | tee godot-export.log
+
+          APK="${PROJECT_DIR}/build/android/${APK_NAME}"
+          test -s "${APK}"
+          unzip -t "${APK}"
+          unzip -l "${APK}" | grep -Fq "assets/authority/v1_12/bundle_manifest.json"
+          "${ANDROID_HOME}/build-tools/35.0.1/apksigner" verify --verbose --print-certs "${APK}" | tee apk-signature.txt
+          sha256sum "${APK}" | tee "${APK}.sha256"
+          cp \
+            "${APK}" \
+            "${APK}.sha256" \
+            wp01r-authority-python.log \
+            wp01r-installed-authority.log \
+            authority-runtime.log \
+            godot-import.log \
+            battle-runtime.log \
+            battle-polish-test.log \
+            battle-ui-test.log \
+            godot-export.log \
+            apk-signature.txt \
+            android-artifact/
+
+      - name: Upload v0.03.1 WP-01R APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: The-Role-of-the-Diyse-Godot-v0.03.1-WP01R-Runtime-Verified-APK
+          path: android-artifact/
+          if-no-files-found: error
+          retention-days: 14
