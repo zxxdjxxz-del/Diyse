@@ -1,4 +1,4 @@
-name: Build Godot v0.05.0 WP-03 Traversal APK
+name: Build Godot v0.05.1 WP-03R Traversal APK
 
 on:
   pull_request:
@@ -12,7 +12,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: godot-v0.05.0-wp03-${{ github.ref }}
+  group: godot-v0.05.1-wp03r-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -22,10 +22,10 @@ jobs:
     env:
       GODOT_VERSION: "4.7.1"
       PROJECT_DIR: "The_Role_of_the_Diyse_Godot_Prototype_v0.02"
-      WP03_APK_NAME: "The_Role_of_the_Diyse_v0.05.0_WP03_QA.apk"
+      WP03_APK_NAME: "The_Role_of_the_Diyse_v0.05.1_WP03R_QA.apk"
 
     steps:
-      - name: Check out WP-03 branch
+      - name: Check out WP-03R branch
         uses: actions/checkout@v4
 
       - name: Set up Java 17
@@ -37,14 +37,14 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Build and verify WP-03 traversal slice
+      - name: Build and verify WP-03R traversal slice
         shell: bash
         run: bash ci/godot-v0.02/wp03/run_wp03_ci.sh
 
-      - name: Upload v0.05.0 WP-03 APK
+      - name: Upload v0.05.1 WP-03R APK
         uses: actions/upload-artifact@v4
         with:
-          name: The-Role-of-the-Diyse-Godot-v0.05.0-WP03-Traversal-Verified-APK
+          name: The-Role-of-the-Diyse-Godot-v0.05.1-WP03R-Traversal-Verified-APK
           path: android-artifact/
           if-no-files-found: error
           retention-days: 14
