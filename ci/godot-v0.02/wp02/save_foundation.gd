@@ -482,7 +482,11 @@ func _hash_envelope(envelope: Dictionary) -> String:
     return _sha256_variant(body)
 
 func _sha256_variant(value) -> String:
-    return _sha256_text(JSON.stringify(value, "", true))
+    # Godot JSON parses every number as a float. Hash the canonical JSON
+    # round-trip so an in-memory integer and its persisted numeric form agree.
+    var serialized := JSON.stringify(value, "", true)
+    var canonical = JSON.parse_string(serialized)
+    return _sha256_text(JSON.stringify(canonical, "", true))
 
 func _sha256_text(text: String) -> String:
     var context := HashingContext.new()
