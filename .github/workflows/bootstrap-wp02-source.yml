@@ -51,7 +51,10 @@ jobs:
           git config user.name "Diyse WP-02 Source Publication"
           git config user.email "actions@users.noreply.github.com"
           git add ci/godot-v0.02/wp02
-          test -n "$(git diff --cached --name-only)"
+          if git diff --cached --quiet; then
+            echo "Verified WP-02 source is already published; nothing to commit."
+            exit 0
+          fi
           ! git diff --cached --name-only | grep -E '(^|/)__pycache__/|\.pyc$'
           git commit -m "Add WP-02 save and migration foundation"
           git push origin HEAD:refs/heads/${TARGET_BRANCH}
