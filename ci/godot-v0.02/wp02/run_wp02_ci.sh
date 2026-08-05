@@ -3,7 +3,7 @@ set -euo pipefail
 
 : "${GODOT_VERSION:=4.7.1}"
 : "${PROJECT_DIR:=The_Role_of_the_Diyse_Godot_Prototype_v0.02}"
-: "${APK_NAME:=The_Role_of_the_Diyse_v0.04.0_WP02_QA.apk}"
+: "${APK_NAME:=The_Role_of_the_Diyse_v0.04.1_WP02R_QA.apk}"
 : "${SIMULATOR_SHA256:=ca6cdb5aa2fa65031dd4d41bc53ce2f3a55c7bb1c50b8ca08da3ea23d893c59a}"
 : "${BATTLE_SCENE_SHA256:=f9a391784df0bd24afa2e9d0ad1ee5739827e4c6d25a131fc80ebd519c977ea8}"
 : "${AUTHORITY_ZIP_SHA256:=89bb3e75aa2658471bf1a092901fb69adcc1dd44059db8d1a96685e8f305fc19}"
@@ -92,17 +92,23 @@ grep -Fq 'AuthorityManager="*res://src/autoload/authority_manager.gd"' "${PROJEC
 test -f "${PROJECT_DIR}/assets/authority/v1_12/bundle_manifest.json"
 test -f "${PROJECT_DIR}/assets/authority/v1_12/indexes/master_identity_index.json"
 
-printf '\n=== Apply WP-02 save, migration, and transaction foundation ===\n'
+printf '\n=== Apply WP-02R save/UI integration and battle-frame removal ===\n'
 cp "${WP02_DIR}/save_foundation.gd" "${PROJECT_DIR}/src/autoload/save_foundation.gd"
 cp "${WP02_DIR}/wp02_save_regression_test.gd" "${PROJECT_DIR}/tests/wp02_save_regression_test.gd"
 cp "${WP02_DIR}/wp02_save_regression_test.tscn" "${PROJECT_DIR}/tests/wp02_save_regression_test.tscn"
 python "${WP02_DIR}/validate_wp02_contract.py" "${WP02_DIR}" | tee wp02-contract-validation.log
 python "${WP02_DIR}/apply_wp02.py" "${PROJECT_DIR}"
-grep -Fqx 'const BUILD_VERSION := "0.04.0-WP02"' "${PROJECT_DIR}/src/autoload/build_identity.gd"
-grep -Fqx 'version/name="0.04.0-WP02"' "${PROJECT_DIR}/export_presets.cfg"
+grep -Fqx 'const BUILD_VERSION := "0.04.1-WP02R"' "${PROJECT_DIR}/src/autoload/build_identity.gd"
+grep -Fqx 'version/name="0.04.1-WP02R"' "${PROJECT_DIR}/export_presets.cfg"
 grep -Fq 'SaveFoundation="*res://src/autoload/save_foundation.gd"' "${PROJECT_DIR}/project.godot"
 grep -Fq 'AuthorityManager="*res://src/autoload/authority_manager.gd"' "${PROJECT_DIR}/project.godot"
 grep -Fq "WP-02 CONTRACT VALIDATION: PASS" wp02-contract-validation.log
+grep -Fq 'const SLOT_ID := "autosave"' "${PROJECT_DIR}/src/autoload/save_manager.gd"
+grep -Fq 'SaveFoundation.save_game(SLOT_ID, payload, "playable")' "${PROJECT_DIR}/src/autoload/save_manager.gd"
+grep -Fq 'PASS: WP-02 device-path SaveManager' "${PROJECT_DIR}/tests/wp02_ui_save_integration_test.gd"
+! grep -Fq 'OrnateBattleFrame' "${PROJECT_DIR}/src/scenes/battle_scene.gd"
+! grep -Fq 'diyse_battle_outer_frame.svg' "${PROJECT_DIR}/src/scenes/battle_scene.gd"
+test ! -f "${PROJECT_DIR}/assets/ui/diyse_battle_outer_frame.svg"
 
 printf '\n=== Install Godot 4.7.1 and export templates ===\n'
 GODOT_ROOT="${RUNNER_TEMP}/godot"
@@ -124,19 +130,19 @@ GODOT_BIN="${GODOT_ROOT}/godot"
 test -f "${TEMPLATE_ROOT}/android_debug.apk"
 
 printf '\n=== Configure QA signing and Android paths ===\n'
-KEYSTORE="${RUNNER_TEMP}/diyse-v0.04.0-wp02-qa.keystore"
+KEYSTORE="${RUNNER_TEMP}/diyse-v0.04.1-wp02r-qa.keystore"
 keytool -genkeypair \
   -keystore "${KEYSTORE}" \
-  -storepass diyse-v0040-wp02-qa \
-  -alias diyse-v0040-wp02-qa \
-  -keypass diyse-v0040-wp02-qa \
+  -storepass diyse-v0041-wp02r-qa \
+  -alias diyse-v0041-wp02r-qa \
+  -keypass diyse-v0041-wp02r-qa \
   -keyalg RSA \
   -keysize 2048 \
   -validity 3650 \
-  -dname "CN=The Role of the Diyse WP-02 QA,O=Diyse Prototype,C=US"
+  -dname "CN=The Role of the Diyse WP-02R QA,O=Diyse Prototype,C=US"
 export GODOT_ANDROID_KEYSTORE_DEBUG_PATH="${KEYSTORE}"
-export GODOT_ANDROID_KEYSTORE_DEBUG_USER="diyse-v0040-wp02-qa"
-export GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD="diyse-v0040-wp02-qa"
+export GODOT_ANDROID_KEYSTORE_DEBUG_USER="diyse-v0041-wp02r-qa"
+export GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD="diyse-v0041-wp02r-qa"
 mkdir -p "${HOME}/.config/godot"
 "${GODOT_BIN}" --headless --editor --path "${PROJECT_DIR}" --quit-after 2 || true
 SETTINGS_FILE="$(find "${HOME}/.config/godot" -maxdepth 1 -type f -name 'editor_settings-4*.tres' | head -n 1)"
@@ -174,6 +180,15 @@ test "${WP02_STATUS}" -eq 0
 grep -Fq "PASS: WP-02 atomic save, migration, rollback, recovery, completion metadata, and Final Return Save gates passed." wp02-save-runtime.log
 ! grep -E "SCRIPT ERROR|Parse Error|Compile Error|WP-02 SAVE TEST FAILED|Invalid call|Invalid assignment|Invalid access|ERROR:" wp02-save-runtime.log
 
+printf '\n=== Run WP-02 device-path save and Continue integration regression ===\n'
+set +e
+"${GODOT_BIN}" --headless --path "${PROJECT_DIR}" --quit-after 240 --verbose res://tests/wp02_ui_save_integration_test.tscn 2>&1 | tee wp02-ui-save-runtime.log
+WP02_UI_STATUS=${PIPESTATUS[0]}
+set -e
+test "${WP02_UI_STATUS}" -eq 0
+grep -Fq "PASS: WP-02 device-path SaveManager, Continue, backup recovery, and title integration are operational." wp02-ui-save-runtime.log
+! grep -E "SCRIPT ERROR|Parse Error|Compile Error|WP-02 UI SAVE INTEGRATION FAILED|Invalid call|Invalid assignment|Invalid access|ERROR:" wp02-ui-save-runtime.log
+
 printf '\n=== Run inherited battle regressions ===\n'
 set +e
 "${GODOT_BIN}" --headless --path "${PROJECT_DIR}" --quit-after 180 --verbose res://src/scenes/battle_scene.tscn 2>&1 | tee battle-runtime.log
@@ -196,7 +211,7 @@ set +e
 UI_STATUS=${PIPESTATUS[0]}
 set -e
 test "${UI_STATUS}" -eq 0
-grep -Fq "PASS: compact fixed round controls and restrained ornate battle trim instantiated correctly." battle-ui-test.log
+grep -Fq "PASS: compact fixed round controls instantiate without the custom outer battle frame." battle-ui-test.log
 ! grep -E "SCRIPT ERROR|Parse Error|Compile Error|Invalid call|Invalid assignment|Invalid access|DIYSE AUTHORITY FAILURE|ERROR:" battle-ui-test.log
 
 printf '\n=== Export and verify signed WP-02 QA APK ===\n'
@@ -216,6 +231,8 @@ test -s "${APK}"
 unzip -t "${APK}"
 unzip -l "${APK}" | grep -Fq "assets/authority/v1_12/bundle_manifest.json"
 unzip -l "${APK}" | grep -Fq "assets/src/autoload/save_foundation.gdc"
+unzip -l "${APK}" | grep -Fq "assets/src/autoload/save_manager.gdc"
+! unzip -l "${APK}" | grep -Fq "diyse_battle_outer_frame"
 "${ANDROID_HOME}/build-tools/35.0.1/apksigner" verify --verbose --print-certs "${APK}" | tee apk-signature.txt
 sha256sum "${APK}" | tee "${APK}.sha256"
 cp \
@@ -226,6 +243,7 @@ cp \
   wp02-contract-validation.log \
   authority-runtime.log \
   wp02-save-runtime.log \
+  wp02-ui-save-runtime.log \
   godot-import.log \
   battle-runtime.log \
   battle-polish-test.log \
@@ -234,4 +252,4 @@ cp \
   apk-signature.txt \
   android-artifact/
 
-printf '\nWP-02 CI BUILD: PASS\n'
+printf '\nWP-02R DEVICE-INTEGRATED CI BUILD: PASS\n'
