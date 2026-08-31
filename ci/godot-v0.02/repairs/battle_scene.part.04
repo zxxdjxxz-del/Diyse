@@ -1,0 +1,95 @@
+    confirm_button.visible = false
+    if current_party_index >= planning_ids.size():
+        confirm_button.visible = true
+        _refresh_plan_label()
+        return
+    _command_button("ATTACK", func(): _choose_action("ATTACK", "ABILITY", "ENEMY"))
+    _command_button("ABILITIES", _show_abilities)
+    _command_button("CARDS", _show_cards)
+    _command_button("ITEMS", _show_items)
+    _command_button("DEFEND", func(): _record_plan("DEFEND", "DEFEND", _current_actor()))
+    var ultimate := Button.new()
+    ultimate.text = "ULTIMATE"
+    ultimate.custom_minimum_size = Vector2(0, 62)
+    ultimate.add_theme_font_size_override("font_size", 19)
+    ultimate.disabled = not sim.ultimate_available(_current_actor())
+    ultimate.pressed.connect(func(): _choose_action("CREST_OF_EIGHT", "ABILITY", "ENEMY"))
+    command_box.add_child(ultimate)
+
+func _command_button(text: String, callback: Callable) -> void:
+    var button := Button.new()
+    button.text = text
+    button.custom_minimum_size = Vector2(0, 62)
+    button.add_theme_font_size_override("font_size", 19)
+    button.pressed.connect(callback)
+    command_box.add_child(button)
+
+func _detail_button(text: String) -> Button:
+    var button := Button.new()
+    button.text = text
+    button.custom_minimum_size = Vector2(0, 54)
+    button.add_theme_font_size_override("font_size", 17)
+    return button
+
+func _show_abilities() -> void:
+    _clear(detail_box)
+    for action_id in ABILITIES.get(_current_actor(), []):
+        var button := _detail_button(str(action_id).replace("_", " ").capitalize())
+        button.pressed.connect(_on_ability_pressed.bind(str(action_id)))
+        detail_box.add_child(button)
+
+func _show_cards() -> void:
+    _clear(detail_box)
+    for card in CARDS:
+        var card_id := str(card[0])
+        var action_id := str(card[1])
+        var button := _detail_button(action_id.replace("_", " ").capitalize() + "  (%d)" % int(sim.card_uses.get(card_id, 0)))
+        button.disabled = not sim.card_available(card_id) or _planned_card_count(action_id) > 0
+        button.pressed.connect(_choose_action.bind(action_id, "CARD", "ENEMY"))
+        detail_box.add_child(button)
+
+func _show_items() -> void:
+    _clear(detail_box)
+    var salve := _detail_button("Field Salve ×%d" % int(GameState.inventory.get("ITM_FIELD_SALVE", 0)))
+    salve.disabled = int(GameState.inventory.get("ITM_FIELD_SALVE", 0)) <= _planned_item_count("ITEM_FIELD_SALVE")
+    salve.pressed.connect(func(): _choose_action("ITEM_FIELD_SALVE", "ITEM", "ALLY"))
+    detail_box.add_child(salve)
+    var triage := _detail_button("Company Triage Kit ×%d" % int(GameState.inventory.get("ITM_COMPANY_TRIAGE_KIT", 0)))
+    triage.disabled = int(GameState.inventory.get("ITM_COMPANY_TRIAGE_KIT", 0)) <= _planned_item_count("ITEM_TRIAGE")
+    triage.pressed.connect(func(): _record_plan("ITEM_TRIAGE", "ITEM", _current_actor()))
+    detail_box.add_child(triage)
+
+func _planned_card_count(action_id: String) -> int:
+    var count := 0
+    for plan in plans:
+        if str(plan.get("action_id", "")) == action_id:
+            count += 1
+    return count
+
+func _planned_item_count(action_id: String) -> int:
+    var count := 0
+    for plan in plans:
+        if str(plan.get("action_id", "")) == action_id:
+            count += 1
+    return count
+
+func _choose_action(action_id: String, family: String, target_policy: String) -> void:
+    if target_policy == "SELF":
+        _record_plan(action_id, family, _current_actor())
+        return
+    pending_action = {"action_id": action_id, "family": family}
+    _show_targets(target_policy)
+
+func _show_targets(policy: String) -> void:
+    _clear(detail_box)
+    var ids: Array[String] = sim.living_party() if policy == "ALLY" else sim.living_enemies()
+    for id in ids:
+        var actor: Dictionary = sim.actor(id)
+        var button := _detail_button("%s   HP %d/%d" % [actor["name"], actor["hp"], actor["max_hp"]])
+        button.pressed.connect(_record_pending_target.bind(id))
+        detail_box.add_child(button)
+
+func _on_ability_pressed(action_id: String) -> void:
+    _choose_action(action_id, "ABILITY", _target_policy(action_id))
+
+func _record_pending_target(target_id: String) -> void:
