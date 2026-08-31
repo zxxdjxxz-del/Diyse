@@ -1,0 +1,448 @@
+- `Vase_4` · `Vase_Rubble_Medium` · `WeaponStand` · `Whetstone`
+- `Workbench` · `Workbench_Drawers`
+
+### Practical prop coverage
+
+Barrels/crates/sacks/storage; benches/tables/chairs/stools/beds/cabinets/shelves/bookcases; books/scrolls; bottles/mugs/plates/cutlery; candles/chandeliers/lanterns/torches; chests/coins/keys; cages; market stalls; farm crates; anvils/workbenches/whetstones; weapon stands; banners/shields/swords/axes/pickaxes; cauldrons/potions; rope/chains; small dressing clutter.
+
+## 10. Universal Animation Library 1 — Verified CC0
+
+- **43 clips.**
+- Includes a normal/no-root-motion library and an `_RM` version with root motion baked into the animations.
+
+- `A_TPose` · `Crouch_Fwd_Loop` · `Crouch_Idle_Loop` · `Dance_Loop`
+- `Death01` · `Driving_Loop` · `Fixing_Kneeling` · `Hit_Chest`
+- `Hit_Head` · `Idle_Loop` · `Idle_Talking_Loop` · `Idle_Torch_Loop`
+- `Interact` · `Jog_Fwd_Loop` · `Jump_Land` · `Jump_Loop`
+- `Jump_Start` · `PickUp_Table` · `Pistol_Aim_Down` · `Pistol_Aim_Neutral`
+- `Pistol_Aim_Up` · `Pistol_Idle_Loop` · `Pistol_Reload` · `Pistol_Shoot`
+- `Punch_Cross` · `Punch_Jab` · `Push_Loop` · `Roll`
+- `Sitting_Enter` · `Sitting_Exit` · `Sitting_Idle_Loop` · `Sitting_Talking_Loop`
+- `Spell_Simple_Enter` · `Spell_Simple_Exit` · `Spell_Simple_Idle_Loop` · `Spell_Simple_Shoot`
+- `Sprint_Loop` · `Swim_Fwd_Loop` · `Swim_Idle_Loop` · `Sword_Attack`
+- `Sword_Idle` · `Walk_Formal_Loop` · `Walk_Loop`
+
+## 11. Universal Animation Library 2 — Verified CC0
+
+- **43 clips.**
+- Includes normal/no-root-motion and `_RM` root-motion versions.
+- Includes a female mannequin on the same rig / very similar proportions; the included README explicitly says animations can be retargeted from the library files in Blender or directly in-engine.
+
+- `A_TPose` · `Chest_Open` · `ClimbUp_1m` · `Consume`
+- `Farm_Harvest` · `Farm_PlantSeed` · `Farm_Watering` · `Hit_Knockback`
+- `Idle_FoldArms_Loop` · `Idle_Lantern_Loop` · `Idle_No_Loop` · `Idle_Rail_Call`
+- `Idle_Rail_Loop` · `Idle_Shield_Break` · `Idle_Shield_Loop` · `Idle_TalkingPhone_Loop`
+- `LayToIdle` · `Melee_Hook` · `Melee_Hook_Rec` · `NinjaJump_Idle_Loop`
+- `NinjaJump_Land` · `NinjaJump_Start` · `OverhandThrow` · `Shield_Dash`
+- `Shield_OneShot` · `Slide_Exit` · `Slide_Loop` · `Slide_Start`
+- `Sword_Block` · `Sword_Dash` · `Sword_Heavy_Combo` · `Sword_Regular_A`
+- `Sword_Regular_A_Rec` · `Sword_Regular_B` · `Sword_Regular_B_Rec` · `Sword_Regular_C`
+- `Sword_Regular_Combo` · `TreeChopping_Loop` · `Walk_Carry_Loop` · `Yes`
+- `Zombie_Idle_Loop` · `Zombie_Scratch` · `Zombie_Walk_Fwd_Loop`
+
+## 12. What the 86 Generic Animations Cover
+
+- **Locomotion:** walk, formal walk, jog, sprint, crouch, jump, roll, climb, slide, swim, carry.
+- **Generic combat:** sword attacks/combos, block, sword dash, shield attacks/dash, punches, melee hook, throwing.
+- **Reactions:** chest hit, head hit, knockback, death.
+- **Magic:** spell enter, idle, shoot/cast, exit.
+- **Interaction:** interact, pickup, chest open, consume.
+- **NPC/world activity:** sitting, talking, dance, kneeling repair, farming, tree chopping, torch/lantern idles, folded-arms/other idles.
+- **Enemy/NPC specials:** zombie idle/walk/scratch.
+
+## 13. Character-Specific Animation Gaps for DIYSE
+
+The generic libraries reduce baseline animation workload, but they do **not** replace class-identity animation work.
+
+- **Cyanis:** Crest Knight weapon work and Crest Magus casting identity still need bespoke/retargeted motions.
+- **Ilyra:** Wardrod + shield combat requires its own set; generic shield animations may supply a starting point only.
+- **Torren:** bow draw/aim/release and War Archer/Routeweaver-specific movement are still needed.
+- **Nimera:** card handling, card casting, and Sixfold Knight-specific motions are still needed.
+- **Vaelira:** dedicated bow/Prism Archer animation work is still needed.
+- **Seyrik:** oversized greatsword/Ruin Vanguard/Ruin Healer motions need heavier bespoke treatment than the generic sword set.
+
+## 14. Practical DIYSE Map-Building Strategy Established in This Chat
+
+1. **Do not reconstruct the source maps.** Use the extracted material as a parts library.
+2. Build **original DIYSE layouts** first around traversal, story beats, encounters, treasure, landmarks, and pacing.
+3. Treat reusable environment systems as shared modules: water, fire, doors, trees, shadows, candles, interaction props.
+4. Mix compatible pieces from multiple source families rather than making a DIYSE location visually identical to a source map.
+5. Add original/generated DIYSE-specific architecture and landmarks where identity matters.
+6. Use the CC0 prop kit aggressively for generic dressing so custom art effort is reserved for iconic content.
+7. Use the CC0 animation libraries for shared locomotion/reactions/NPC activity, reserving custom animation effort for class/weapon identity.
+8. Map size and encounter/treasure counts should be decided with **what can honestly be built** in mind, but asset availability should not dictate copied source layouts.
+
+## 15. What Is Still Missing / Needs Original Work
+
+- Permanent-party character models suitable for the target HD-2D anime presentation.
+- Enemy models/rigs and boss-specific assets.
+- Class- and weapon-specific combat animations listed above.
+- DIYSE-specific landmark architecture, signage, iconography, banners/crests, Black Host identity pieces, and location-defining assets.
+- Any missing biome-specific construction kits not sufficiently covered by current source families.
+- Final engine materials/shaders, geometry, collision, nav, lighting implementation, and map composition.
+- A clean rights decision for any extracted/non-CC0 source textures intended to survive beyond private prototyping.
+
+## 16. Recommended Repo Organization
+
+```text
+assets/
+  environment/
+    extracted_private_reference/
+      maps_001_031/
+    diyse_original/
+    shared_effects/
+      water/
+      fire/
+      doors/
+      shadows/
+      vegetation/
+  third_party_cc0/
+    quaternius/
+      fantasy_props_megakit_standard/
+      universal_animation_library_1_standard/
+      universal_animation_library_2_standard/
+  characters/
+  enemies/
+  props/
+  animations/
+docs/
+  asset_inventory/
+```
+
+Keep verified CC0 material physically separate from license-unverified extracted material.
+
+## 17. Generated Inspection / Preview Artifacts From This Chat
+
+- `tga_contact_sheet.jpg`
+- `composite_lighting1.png`
+- `composite_lighting2.png`
+- `lighting_diff_boost.png`
+- `map001_material_reconstruction_preview.png`
+- `map001_partial_water_animation.gif`
+- `map001_full_water_30frame.gif`
+- `map002_contact_sheet.png`
+- `map002_reconstruction_preview.png`
+- `map002_door_animation.gif`
+- `map006_fire_animation.gif`
+- `maps001-009_main_atlases.png`
+- `maps010-011_available_atlases.png`
+- `maps010-027_environment_atlases.png`
+- `maps010-027_reusable_asset_samples.png`
+- `map010_door_set_1.gif`
+- `map010_door_set_3.gif`
+- `map011_chair_preview.png`
+- `map012_lever_animation.gif`
+- `map018_fireplace_animation.gif`
+- `maps028-031_environment_atlases.png`
+- `fantasy_props_megakit_previews.png`
+- `universal_animation_inventory.txt`
+- `maps032-050_environment_atlases.png`
+- `maps032-050_reusable_asset_samples.png`
+- `map032_woodchip_animation.gif`
+- `map047_cloth_animation.gif`
+- `maps051-075_environment_atlases.png`
+- `maps051-075_reusable_asset_samples.png`
+- `map055_magic_effect_32frame.gif`
+- `map062_lightshaft_59frame.gif`
+- `map071_grass_10frame.gif`
+- `map075_lava_5frame.gif`
+- `maps076-095_environment_atlases.png`
+- `maps076-095_reusable_asset_samples.png`
+- `map091_water_30frame.gif`
+- `map092_fireplace_6frame.gif`
+- `map095_candle_3frame.gif`
+- `maps096-116_environment_atlases.png`
+- `maps096-116_reusable_asset_samples.png`
+- `map111_water_30frame.gif`
+- `map103_windmill_lighting_30state.gif`
+- `map104_lightshaft_15state.gif`
+
+These previews are diagnostic/organizational derivatives created during this chat; the master inventory does not depend on them for authority.
+
+## 18. Exact Source License Text — Quaternius Packs
+
+### Fantasy Props MegaKit [Standard]
+
+```text
+This is the standard FREE version of the Fantasy Props MegaKit, which only contains 
+a portion of the models . You can buy the PRO version which has all the models,
+or the SOURCE version which has all the models and also includes Unity(URP), Unreal Engine and Godot projects
+with custom shaders already set up.
+
+You can get the other versions from the website https://quaternius.com
+
+-------------------------------------------------------
+License:
+CC0 1.0 Universal (CC0 1.0) 
+Public Domain Dedication
+https://creativecommons.org/publicdomain/zero/1.0/
+
+------------------------------------------------------
+Models by @Quaternius
+Consider supporting me on Patreon!
+
+https://www.patreon.com/quaternius
+
+-------------------------------------------------------
+Join the Discord Server:
+https://discord.gg/vJqnRUYRfT
+```
+
+### Universal Animation Library 1
+
+```text
+-------------------------------------------------------
+License:
+CC0 1.0 Universal (CC0 1.0) 
+Public Domain Dedication
+https://creativecommons.org/publicdomain/zero/1.0/
+
+------------------------------------------------------
+Models by @Quaternius
+Consider supporting me on Patreon!
+
+https://www.patreon.com/quaternius
+```
+
+### Universal Animation Library 2
+
+```text
+-------------------------------------------------------
+License:
+CC0 1.0 Universal (CC0 1.0) 
+Public Domain Dedication
+https://creativecommons.org/publicdomain/zero/1.0/
+
+------------------------------------------------------
+Models by @Quaternius
+Consider supporting me on Patreon!
+
+https://www.patreon.com/quaternius
+```
+
+## APPENDIX A — Exhaustive Extracted Map Texture Filenames
+
+Total listed: **3,214 canonical TGA files**.
+
+### Map 001 — 59 files
+
+- `gt_0_map001_map_color.tga`
+- `gt_0_map001_map_lighting.tga`
+- `gt_0_map001_map_lighting2.tga`
+- `gt_1_map001_waterside_color.tga`
+- `gt_1_map001_waterside_lighting.tga`
+- `gt_2_map001_watersurface_color_0.tga`
+- `gt_2_map001_watersurface_color_1.tga`
+- `gt_2_map001_watersurface_color_10.tga`
+- `gt_2_map001_watersurface_color_11.tga`
+- `gt_2_map001_watersurface_color_12.tga`
+- `gt_2_map001_watersurface_color_13.tga`
+- `gt_2_map001_watersurface_color_14.tga`
+- `gt_2_map001_watersurface_color_15.tga`
+- `gt_2_map001_watersurface_color_16.tga`
+- `gt_2_map001_watersurface_color_17.tga`
+- `gt_2_map001_watersurface_color_18.tga`
+- `gt_2_map001_watersurface_color_19.tga`
+- `gt_2_map001_watersurface_color_2.tga`
+- `gt_2_map001_watersurface_color_20.tga`
+- `gt_2_map001_watersurface_color_21.tga`
+- `gt_2_map001_watersurface_color_22.tga`
+- `gt_2_map001_watersurface_color_23.tga`
+- `gt_2_map001_watersurface_color_24.tga`
+- `gt_2_map001_watersurface_color_25.tga`
+- `gt_2_map001_watersurface_color_26.tga`
+- `gt_2_map001_watersurface_color_27.tga`
+- `gt_2_map001_watersurface_color_28.tga`
+- `gt_2_map001_watersurface_color_29.tga`
+- `gt_2_map001_watersurface_color_3.tga`
+- `gt_2_map001_watersurface_color_4.tga`
+- `gt_2_map001_watersurface_color_5.tga`
+- `gt_2_map001_watersurface_color_6.tga`
+- `gt_2_map001_watersurface_color_7.tga`
+- `gt_2_map001_watersurface_color_8.tga`
+- `gt_2_map001_watersurface_color_9.tga`
+- `gt_2_map001_watersurface_lighting.tga`
+- `gt_3_map001_gatef_color.tga`
+- `gt_3_map001_gatef_lighting.tga`
+- `gt_4_map001_gateb_color.tga`
+- `gt_4_map001_gateb_lighting.tga`
+- `gt_6_map001_shadow_color.tga`
+- `gt_7_map001_watersplash1_color_0.tga`
+- `gt_7_map001_watersplash1_color_1.tga`
+- `gt_7_map001_watersplash1_color_2.tga`
+- `gt_7_map001_watersplash1_color_3.tga`
+- `gt_7_map001_watersplash1_color_4.tga`
+- `gt_7_map001_watersplash1_color_5.tga`
+- `gt_7_map001_watersplash1_color_6.tga`
+- `gt_7_map001_watersplash1_color_7.tga`
+- `gt_7_map001_watersplash1_lighting.tga`
+- `gt_8_map001_watersplash2_color_0.tga`
+- `gt_8_map001_watersplash2_color_1.tga`
+- `gt_8_map001_watersplash2_color_2.tga`
+- `gt_8_map001_watersplash2_color_3.tga`
+- `gt_8_map001_watersplash2_color_4.tga`
+- `gt_8_map001_watersplash2_color_5.tga`
+- `gt_8_map001_watersplash2_color_6.tga`
+- `gt_8_map001_watersplash2_color_7.tga`
+- `gt_8_map001_watersplash2_lighting.tga`
+
+### Map 002 — 15 files
+
+- `gt_0_map002_map_color.tga`
+- `gt_0_map002_map_lighting.tga`
+- `gt_0_map002_map_lighting2.tga`
+- `gt_1_map002_tree_color.tga`
+- `gt_1_map002_tree_lighting.tga`
+- `gt_2_map002_door_color.tga`
+- `gt_2_map002_door_color_0.tga`
+- `gt_2_map002_door_color_1.tga`
+- `gt_2_map002_door_color_2.tga`
+- `gt_2_map002_door_color_3.tga`
+- `gt_2_map002_door_color_4.tga`
+- `gt_2_map002_door_lighting.tga`
+- `gt_4_map002_shadow_color.tga`
+- `gt_5_map002_icon_tree_color.tga`
+- `gt_5_map002_icon_tree_lighting.tga`
+
+### Map 003 — 53 files
+
+- `gt_0_map003_map_color.tga`
+- `gt_0_map003_map_lighting.tga`
+- `gt_1_map003_watersurface_color_0.tga`
+- `gt_1_map003_watersurface_color_1.tga`
+- `gt_1_map003_watersurface_color_10.tga`
+- `gt_1_map003_watersurface_color_11.tga`
+- `gt_1_map003_watersurface_color_12.tga`
+- `gt_1_map003_watersurface_color_13.tga`
+- `gt_1_map003_watersurface_color_14.tga`
+- `gt_1_map003_watersurface_color_15.tga`
+- `gt_1_map003_watersurface_color_16.tga`
+- `gt_1_map003_watersurface_color_17.tga`
+- `gt_1_map003_watersurface_color_18.tga`
+- `gt_1_map003_watersurface_color_19.tga`
+- `gt_1_map003_watersurface_color_2.tga`
+- `gt_1_map003_watersurface_color_20.tga`
+- `gt_1_map003_watersurface_color_21.tga`
+- `gt_1_map003_watersurface_color_22.tga`
+- `gt_1_map003_watersurface_color_23.tga`
+- `gt_1_map003_watersurface_color_24.tga`
+- `gt_1_map003_watersurface_color_25.tga`
+- `gt_1_map003_watersurface_color_26.tga`
+- `gt_1_map003_watersurface_color_27.tga`
+- `gt_1_map003_watersurface_color_28.tga`
+- `gt_1_map003_watersurface_color_29.tga`
+- `gt_1_map003_watersurface_color_3.tga`
+- `gt_1_map003_watersurface_color_4.tga`
+- `gt_1_map003_watersurface_color_5.tga`
+- `gt_1_map003_watersurface_color_6.tga`
+- `gt_1_map003_watersurface_color_7.tga`
+- `gt_1_map003_watersurface_color_8.tga`
+- `gt_1_map003_watersurface_color_9.tga`
+- `gt_1_map003_watersurface_lighting.tga`
+- `gt_2_map003_waterwave_color_0.tga`
+- `gt_2_map003_waterwave_color_1.tga`
+- `gt_2_map003_waterwave_color_2.tga`
+- `gt_2_map003_waterwave_color_3.tga`
+- `gt_2_map003_waterwave_color_4.tga`
+- `gt_2_map003_waterwave_color_5.tga`
+- `gt_2_map003_waterwave_color_6.tga`
+- `gt_2_map003_waterwave_color_7.tga`
+- `gt_2_map003_waterwave_lighting.tga`
+- `gt_3_map003_waterripple_color_0.tga`
+- `gt_3_map003_waterripple_color_1.tga`
+- `gt_3_map003_waterripple_color_2.tga`
+- `gt_3_map003_waterripple_color_3.tga`
+- `gt_3_map003_waterripple_color_4.tga`
+- `gt_3_map003_waterripple_color_5.tga`
+- `gt_3_map003_waterripple_color_6.tga`
+- `gt_3_map003_waterripple_color_7.tga`
+- `gt_3_map003_waterripple_color_8.tga`
+- `gt_3_map003_waterripple_color_9.tga`
+- `gt_3_map003_waterripple_lighting.tga`
+
+### Map 004 — 10 files
+
+- `gt_0_map004_map_color.tga`
+- `gt_0_map004_map_lighting.tga`
+- `gt_1_map004_candle_color_0.tga`
+- `gt_1_map004_candle_color_1.tga`
+- `gt_1_map004_candle_color_2.tga`
+- `gt_1_map004_candle_lighting_0.tga`
+- `gt_2_map004_wepon_color.tga`
+- `gt_2_map004_wepon_lighting.tga`
+- `gt_3_map004_chairb_color.tga`
+- `gt_3_map004_chairb_lighting.tga`
+
+### Map 005 — 9 files
+
+- `gt_0_map005_map_color_a.tga`
+- `gt_0_map005_map_color_b.tga`
+- `gt_0_map005_map_lighting_a.tga`
+- `gt_0_map005_map_lighting_b.tga`
+- `gt_1_map005_mesh_color_a.tga`
+- `gt_1_map005_mesh_color_b.tga`
+- `gt_1_map005_mesh_lighting_a.tga`
+- `gt_1_map005_mesh_lighting_b.tga`
+- `gt_3_map005_shadow_color.tga`
+
+### Map 006 — 78 files
+
+- `gt_0_map006_map_color.tga`
+- `gt_0_map006_map_lighting.tga`
+- `gt_0_map006_map_lighting2.tga`
+- `gt_12_map006_watersplash1_color_0.tga`
+- `gt_12_map006_watersplash1_color_1.tga`
+- `gt_12_map006_watersplash1_color_2.tga`
+- `gt_12_map006_watersplash1_color_3.tga`
+- `gt_12_map006_watersplash1_color_4.tga`
+- `gt_12_map006_watersplash1_color_5.tga`
+- `gt_12_map006_watersplash1_color_6.tga`
+- `gt_12_map006_watersplash1_color_7.tga`
+- `gt_12_map006_watersplash1_lighting.tga`
+- `gt_13_map006_watersplash2_color_0.tga`
+- `gt_13_map006_watersplash2_color_1.tga`
+- `gt_13_map006_watersplash2_color_2.tga`
+- `gt_13_map006_watersplash2_color_3.tga`
+- `gt_13_map006_watersplash2_color_4.tga`
+- `gt_13_map006_watersplash2_color_5.tga`
+- `gt_13_map006_watersplash2_color_6.tga`
+- `gt_13_map006_watersplash2_color_7.tga`
+- `gt_13_map006_watersplash2_lighting.tga`
+- `gt_1_map006_watersurface_color_0.tga`
+- `gt_1_map006_watersurface_color_1.tga`
+- `gt_1_map006_watersurface_color_10.tga`
+- `gt_1_map006_watersurface_color_11.tga`
+- `gt_1_map006_watersurface_color_12.tga`
+- `gt_1_map006_watersurface_color_13.tga`
+- `gt_1_map006_watersurface_color_14.tga`
+- `gt_1_map006_watersurface_color_15.tga`
+- `gt_1_map006_watersurface_color_16.tga`
+- `gt_1_map006_watersurface_color_17.tga`
+- `gt_1_map006_watersurface_color_18.tga`
+- `gt_1_map006_watersurface_color_19.tga`
+- `gt_1_map006_watersurface_color_2.tga`
+- `gt_1_map006_watersurface_color_20.tga`
+- `gt_1_map006_watersurface_color_21.tga`
+- `gt_1_map006_watersurface_color_22.tga`
+- `gt_1_map006_watersurface_color_23.tga`
+- `gt_1_map006_watersurface_color_24.tga`
+- `gt_1_map006_watersurface_color_25.tga`
+- `gt_1_map006_watersurface_color_26.tga`
+- `gt_1_map006_watersurface_color_27.tga`
+- `gt_1_map006_watersurface_color_28.tga`
+- `gt_1_map006_watersurface_color_29.tga`
+- `gt_1_map006_watersurface_color_3.tga`
+- `gt_1_map006_watersurface_color_4.tga`
+- `gt_1_map006_watersurface_color_5.tga`
+- `gt_1_map006_watersurface_color_6.tga`
+- `gt_1_map006_watersurface_color_7.tga`
+- `gt_1_map006_watersurface_color_8.tga`
+- `gt_1_map006_watersurface_color_9.tga`
+- `gt_1_map006_watersurface_lighting.tga`
+- `gt_2_map006_waterside_color.tga`
+- `gt_2_map006_waterside_color_0.tga`
+- `gt_2_map006_waterside_color_1.tga`
+- `gt_2_map006_waterside_color_2.tga`
+- `gt_2_map006_waterside_color_3.tga`
+- `gt_2_map006_waterside_color_4.tga`
+- `gt_2_map006_waterside_color_5.tga`
