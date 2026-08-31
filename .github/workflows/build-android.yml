@@ -127,18 +127,21 @@ jobs:
       - name: Apply Diyse v0.09C authored gatehouse visual slice
         run: python ci/patch-v009c.py
 
-      - name: Package reconstructed v0.09C source
-        run: zip -qr Diyse-v0.09C-runtime-source.zip source
+      - name: Apply Diyse v0.09D field persistence and release hardening
+        run: python ci/patch-v009d.py
 
-      - name: Upload reconstructed v0.09C source
+      - name: Package reconstructed v0.09D source
+        run: zip -qr Diyse-v0.09D-runtime-source.zip source
+
+      - name: Upload reconstructed v0.09D source
         uses: actions/upload-artifact@v4
         with:
-          name: Diyse-v0.09C-Runtime-Source
-          path: Diyse-v0.09C-runtime-source.zip
+          name: Diyse-v0.09D-Runtime-Source
+          path: Diyse-v0.09D-runtime-source.zip
           if-no-files-found: error
           retention-days: 7
 
-      - name: Run authored-asset contracts, gatehouse traversal, calibration regression, Card, battle, MP, save, presentation, field, progression, menu, inventory, and version tests
+      - name: Run persistence migration, safe-resume, authored-asset, traversal, Card, battle, MP, save, presentation, progression, menu, and inventory tests
         working-directory: source
         run: gradle --no-daemon --stacktrace :core:test
 
@@ -156,7 +159,7 @@ jobs:
       - name: Upload installable APK
         uses: actions/upload-artifact@v4
         with:
-          name: Diyse-Prototype-v0.09C-APK
+          name: Diyse-Prototype-v0.09D-APK
           path: |
             source/android/build/outputs/apk/debug/android-debug.apk
             apk-signature.txt
