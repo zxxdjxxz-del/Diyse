@@ -1,7 +1,7 @@
 # Diyse Project Reference Index
 
 **Status:** Authoritative repository index  
-**Updated:** 2026-08-31
+**Updated:** 2026-08-02
 
 This index identifies which repository documents control future design and implementation work.
 
@@ -10,35 +10,6 @@ This index identifies which repository documents control future design and imple
 The newest approved **Diyse: 3D JRPG Active Master Canon** remains the authority for world, story, characters, classes, combat, Cards, equipment, progression, relationships, quests, and other game canon.
 
 A prototype implementation does not silently replace or amend the master canon. Placeholder prototype content remains provisional unless separately approved and consolidated into the newest full master.
-
-## Asset Library Authority
-
-**Authoritative routing:**
-
-`docs/assets/README.md`
-
-This controls repository routing for the consolidated environment-texture, prop, animation, source-provenance, and asset-inventory work.
-
-The current preserved master is **DIYSE Asset Library Master v5**. Its exact UTF-8 content is stored as ordered parts under:
-
-`docs/assets/archive/DIYSE_ASSET_LIBRARY_MASTER_2026-08-30_v5/`
-
-The reconstruction README in that directory records the expected SHA-256 for byte-level verification.
-
-**Authoritative source-archive manifest:**
-
-`docs/assets/SOURCE_ARCHIVE_MANIFEST.md`
-
-The manifest records the exact source ZIP names, sizes, member counts, and SHA-256 hashes used to build the current master inventory.
-
-Asset provenance must remain explicit:
-
-- extracted Map001–Map116 textures are license-unverified source/reference material and must remain segregated from verified-open assets;
-- Quaternius Fantasy Props MegaKit and Universal Animation Libraries 1 and 2 are verified CC0 1.0 / Public Domain Dedication assets;
-- extracted map material is a parts/reference library for building original Diyse maps, not authority to reconstruct source maps;
-- raw multi-gigabyte source archives are not silently treated as ordinary Git-tracked documentation; any Git LFS or external archive copy must be verified against `docs/assets/SOURCE_ARCHIVE_MANIFEST.md` before becoming authoritative.
-
-Asset-library documents do not override game canon, location canon, or the map/traversal standard. They establish what source material exists, its provenance, its technical characteristics, and how it may be routed into original Diyse production work.
 
 ## 2. Map and Traversal Authority
 
